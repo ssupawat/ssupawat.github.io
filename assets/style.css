@@ -264,8 +264,6 @@ a:hover {
 .home-wrapper {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 2rem;
 }
 
 .home-header {
@@ -291,11 +289,22 @@ a:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
+}
+
+.post-list-item > div:first-child {
+    flex: 1;
 }
 
 .post-list-item a {
     color: var(--text);
     font-size: 1.3rem;
+}
+
+.post-description {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
 }
 
 .post-list-item .post-meta {

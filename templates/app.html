@@ -195,7 +195,10 @@
                 const postList = posts
                     .map((post) => {
                         return `    <li class="post-list-item">
-                            <a href="#/${post.slug}">${post.title}</a>
+                            <div>
+                                <a href="#/${post.slug}">${post.title}</a>
+                                <div class="post-description">${post.description}</div>
+                            </div>
                             <div class="post-meta">${post.date}</div>
                         </li>`;
                     })
@@ -204,12 +207,10 @@
                 app.innerHTML = `
                     <p class="tagline">${config.tagline}</p>
                     <div class="home-wrapper">
-                        <div>
-                            <h2>Posts</h2>
-                            <ul class="post-list">
-                                ${postList}
-                            </ul>
-                        </div>
+                      <h2>Posts</h2>
+                      <ul class="post-list">
+                          ${postList}
+                      </ul>
                     </div>
                 `;
             }
