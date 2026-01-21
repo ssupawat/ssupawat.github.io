@@ -113,6 +113,12 @@ a:hover {
     opacity: 0.8;
 }
 
+.tagline {
+    color: var(--muted);
+    font-size: 1.2rem;
+    margin-bottom: 3rem;
+}
+
 .post-header {
     margin-bottom: 3rem;
 }
