@@ -125,7 +125,8 @@ function renderSinglePage(posts) {
   return template
     .replace("{{posts}}", postsJson)
     .replace("{{about}}", aboutJson)
-    .replace("{{config}}", configJson);
+    .replace("{{config}}", configJson)
+    .replace(/\{\{tagline\}\}/g, config.tagline);
 }
 
 function copyAssets() {

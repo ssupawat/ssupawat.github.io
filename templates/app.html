@@ -3,13 +3,13 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Supawat</title>
-        <meta name="description" content="Learning about software and electrical engineering" />
+        <title>Supawat's Blog</title>
+        <meta name="description" content="{{tagline}}" />
 
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="Supawat | Learning about software and electrical engineering" />
-        <meta property="og:description" content="Learning about software and electrical engineering" />
+        <meta property="og:title" content="Supawat's Blog" />
+        <meta property="og:description" content="{{tagline}}" />
         <meta property="og:url" content="https://ssupawat.github.io" />
 
         <!-- Twitter -->
@@ -282,11 +282,11 @@
                 // Update page title
                 const post = posts.find((p) => hash === "/" + p.slug);
                 if (post) {
-                    document.title = `${post.title} - Supawat | ${config.tagline}`;
+                    document.title = `${post.title} - Supawat's Blog`;
                 } else if (hash === "/") {
-                    document.title = `Supawat | ${config.tagline}`;
+                    document.title = `Supawat's Blog`;
                 } else if (hash === "/about") {
-                    document.title = `About Supawat | ${config.tagline}`;
+                    document.title = `About Supawat`;
                 }
             }
 
