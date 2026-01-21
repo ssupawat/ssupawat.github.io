@@ -74,56 +74,60 @@ export default defineConfig({
         });
 
         // Serve files from dist directory
-        return () => {
-          server.middlewares.use((req, res, next) => {
-            // Try to serve static files from dist
-            let reqPath = req.url === "/" ? "/index.html" : req.url;
-            let distPath = path.join(process.cwd(), "dist", reqPath);
+        server.middlewares.use((req, res, next) => {
+          // Skip Vite's internal requests
+          if (req.url.startsWith('/@vite') || req.url.startsWith('/__vite')) {
+            return next();
+          }
 
-            // If no extension and file doesn't exist, try adding .html
-            if (!path.extname(reqPath) && !fs.existsSync(distPath)) {
-              distPath = path.join(process.cwd(), "dist", reqPath + ".html");
+          // Parse URL to remove query strings
+          const urlPath = new URL(req.url, `http://${req.headers.host}`).pathname;
+          let reqPath = urlPath === "/" ? "/index.html" : urlPath;
+          let distPath = path.join(process.cwd(), "dist", reqPath);
+
+          // If no extension and file doesn't exist, try adding .html
+          if (!path.extname(reqPath) && !fs.existsSync(distPath)) {
+            distPath = path.join(process.cwd(), "dist", reqPath + ".html");
+          }
+
+          // If it's a directory, try index.html
+          if (
+            fs.existsSync(distPath) &&
+            fs.statSync(distPath).isDirectory()
+          ) {
+            distPath = path.join(distPath, "index.html");
+          }
+
+          if (fs.existsSync(distPath) && fs.statSync(distPath).isFile()) {
+            const ext = path.extname(distPath);
+            const mimeTypes = {
+              ".html": "text/html",
+              ".css": "text/css",
+              ".js": "text/javascript",
+              ".json": "application/json",
+              ".png": "image/png",
+              ".jpg": "image/jpeg",
+              ".gif": "image/gif",
+              ".svg": "image/svg+xml",
+              ".ico": "image/x-icon",
+            };
+
+            res.setHeader("Content-Type", mimeTypes[ext] || "text/plain");
+            let content = fs.readFileSync(distPath, "utf-8");
+
+            // Inject Vite's client script for HMR if it's an HTML file
+            if (ext === ".html") {
+              const viteScript = `<script type="module">
+                import "/@vite/client";
+              </script>`;
+              content = content.replace("</body>", `${viteScript}</body>`);
             }
 
-            // If it's a directory, try index.html
-            if (
-              fs.existsSync(distPath) &&
-              fs.statSync(distPath).isDirectory()
-            ) {
-              distPath = path.join(distPath, "index.html");
-            }
-
-            if (fs.existsSync(distPath) && fs.statSync(distPath).isFile()) {
-              const ext = path.extname(distPath);
-              const mimeTypes = {
-                ".html": "text/html",
-                ".css": "text/css",
-                ".js": "text/javascript",
-                ".json": "application/json",
-                ".png": "image/png",
-                ".jpg": "image/jpeg",
-                ".gif": "image/gif",
-                ".svg": "image/svg+xml",
-                ".ico": "image/x-icon",
-              };
-
-              res.setHeader("Content-Type", mimeTypes[ext] || "text/plain");
-              let content = fs.readFileSync(distPath, "utf-8");
-
-              // Inject Vite's client script for HMR if it's an HTML file
-              if (ext === ".html") {
-                const viteScript = `<script type="module">
-                  import "/@vite/client";
-                </script>`;
-                content = content.replace("</body>", `${viteScript}</body>`);
-              }
-
-              res.end(content);
-            } else {
-              next();
-            }
-          });
-        };
+            res.end(content);
+          } else {
+            next();
+          }
+        });
       },
     },
   ],
