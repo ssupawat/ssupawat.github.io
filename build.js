@@ -128,8 +128,35 @@ function copyAssets() {
     fs.mkdirSync(assetsDistDir, { recursive: true });
   }
 
-  const cssFile = path.join(ASSETS_DIR, "style.css");
-  fs.copyFileSync(cssFile, path.join(assetsDistDir, "style.css"));
+  // Copy all files from assets to dist/assets
+  const files = fs.readdirSync(ASSETS_DIR);
+  files.forEach((file) => {
+    const srcPath = path.join(ASSETS_DIR, file);
+    const stat = fs.statSync(srcPath);
+
+    if (stat.isFile()) {
+      fs.copyFileSync(srcPath, path.join(assetsDistDir, file));
+    } else if (stat.isDirectory()) {
+      // Recursively copy subdirectories (like images/)
+      copyDirSync(srcPath, path.join(assetsDistDir, file));
+    }
+  });
+}
+
+function copyDirSync(src, dest) {
+  fs.mkdirSync(dest, { recursive: true });
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
 }
 
 function build() {
