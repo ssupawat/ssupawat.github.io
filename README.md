@@ -1,15 +1,15 @@
 # Simple Static Blog
 
-A simple static blog built with vanilla HTML, CSS, and JavaScript.
+A simple static blog built with vanilla JavaScript, using hash-based routing for a single-page application approach.
 
 ## Features
 
 - **Simple content creation**: Write blog posts in Markdown with YAML frontmatter
+- **Single-page app**: Hash-based client-side routing (`#/post-slug`)
 - **Fast and lightweight**: No JavaScript framework overhead
-- **Typography-first design**: Clean, readable design with no borders
+- **Live reload**: Development server with hot reload
 - **Dark mode support**: Automatic dark mode based on system preference
-- **Static files**: Generated HTML works without a server
-- **Auto-deployment**: GitHub Actions workflow included
+- **No server required**: Generated `index.html` works completely standalone
 
 ## Getting Started
 
@@ -20,7 +20,23 @@ A simple static blog built with vanilla HTML, CSS, and JavaScript.
 npm install
 ```
 
-2. Create a new blog post in `content/`:
+2. Start the development server:
+```bash
+npm run dev
+```
+
+3. Open http://localhost:3000 in your browser
+
+The dev server will automatically rebuild and reload when you make changes to:
+- `content/` - Blog posts
+- `about.md` - About page
+- `templates/` - HTML templates
+- `assets/` - CSS files
+- `blog.config.js` - Site configuration
+
+### Creating Content
+
+**Blog Posts:** Create files in `content/` with frontmatter:
 ```markdown
 ---
 title: "Your Post Title"
@@ -31,40 +47,16 @@ date: "2026-01-14"
 Your content here...
 ```
 
-3. Build the site:
+**About Page:** Edit `about.md` in the root directory.
+
+**Configuration:** Edit `blog.config.js` to update:
+- Tagline
+- Social media links
+
+### Build for Production
+
 ```bash
 npm run build
 ```
 
-4. Open `dist/index.html` in your browser
-
-### Deployment
-
-The easiest way to deploy is using GitHub Pages:
-
-1. Push this repository to GitHub
-2. Enable GitHub Pages in repository settings
-3. Select "GitHub Actions" as the source
-4. Push to `main` branch - it will auto-deploy
-
-## Customization
-
-### Styling
-
-Edit `assets/style.css` to customize:
-- Colors (CSS variables in `:root`)
-- Typography
-- Spacing
-- Dark mode colors
-
-### Templates
-
-Edit `templates/layout.html` for post pages and `templates/home.html` for the home page.
-
-### Build Script
-
-The `build.js` file is a simple Node.js script that:
-1. Scans `content/` for `.md` files
-2. Parses YAML frontmatter
-3. Converts Markdown to HTML using `marked`
-4. Generates HTML files in `dist/`
+This generates `dist/index.html` - a single self-contained file ready to deploy.
