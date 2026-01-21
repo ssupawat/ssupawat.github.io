@@ -204,6 +204,16 @@
             const app = document.getElementById("app");
 
             function renderHome() {
+                if (posts.length === 0) {
+                    app.innerHTML = `
+                        <p class="tagline">${config.tagline}</p>
+                        <div class="home-wrapper">
+                            <p style="text-align: center; color: var(--muted);">No posts yet. Check back soon!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
                 const postList = posts
                     .map((post) => {
                         return `    <li class="post-list-item">
