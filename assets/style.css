@@ -23,12 +23,8 @@
 body {
     background-color: var(--bg);
     color: var(--text);
-    font-family:
-        "Inter",
-        system-ui,
-        -apple-system,
-        sans-serif;
-    line-height: 1.7;
+    font-family: "Georgia", "Times New Roman", serif;
+    line-height: 1.8;
     margin: 0;
     padding: 0;
 }
@@ -160,9 +156,7 @@ a:hover {
 }
 
 .content {
-    font-family: "Georgia", "Times New Roman", serif;
     font-size: 1.05rem;
-    line-height: 1.8;
 }
 
 .content h2 {
