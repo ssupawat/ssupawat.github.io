@@ -94,8 +94,8 @@ function renderHome(posts) {
   const postList = posts
     .map((post) => {
       return `    <li class="post-list-item">
-      <div class="post-meta">${post.date}</div>
       <a href="/${post.slug}.html">${post.title}</a>
+      <div class="post-meta">${post.date}</div>
     </li>`;
     })
     .join("\n");
