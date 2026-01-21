@@ -3,18 +3,18 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{{title}} - /ssupawat</title>
+        <title>/supawat</title>
         <link rel="stylesheet" href="/assets/style.css" />
     </head>
     <body>
         <main class="container">
             <nav>
-                <a href="/" class="logo">
+                <a href="#/" class="logo">
                     <span class="logo-slash">/</span>
                     <span class="logo-text">supawat</span>
                 </a>
                 <div class="menu">
-                    <a href="/about" class="menu-icon" aria-label="About me">
+                    <a href="#/about" class="menu-icon" aria-label="About me">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="20"
@@ -82,22 +82,12 @@
                 </div>
             </nav>
 
-            <article>
-                <header class="post-header">
-                    <h1>{{title}}</h1>
-                    <div class="meta">
-                        <span class="date">{{date}}</span>
-                        <span class="description">{{description}}</span>
-                    </div>
-                </header>
+            <div id="app"></div>
 
-                <div class="content">{{content}}</div>
-            </article>
-
-            <footer class="footer">
+            <footer class="footer" id="footer">
                 <div class="social-links">
                     <a
-                        href="https://github.com/yourusername"
+                        href=""
                         target="_blank"
                         rel="noopener noreferrer"
                         class="social-icon"
@@ -120,7 +110,7 @@
                         </svg>
                     </a>
                     <a
-                        href="https://facebook.com/yourusername"
+                        href=""
                         target="_blank"
                         rel="noopener noreferrer"
                         class="social-icon"
@@ -146,7 +136,16 @@
             </footer>
         </main>
         <script>
-            // Check for saved theme preference or default to system preference
+            // Posts data embedded in HTML
+            const posts = {{posts}};
+
+            // About page content
+            const aboutContent = {{about}};
+
+            // Config data
+            const config = {{config}};
+
+            // Theme handling
             const themeToggle = document.getElementById("theme-toggle");
             const html = document.documentElement;
 
@@ -166,7 +165,6 @@
                 }
             }
 
-            // Get initial theme
             const savedTheme = localStorage.getItem("theme");
             const systemPrefersDark = window.matchMedia(
                 "(prefers-color-scheme: dark)",
@@ -178,13 +176,102 @@
                 setTheme("dark");
             }
 
-            // Toggle theme on button click
             themeToggle.addEventListener("click", () => {
                 const currentTheme =
                     localStorage.getItem("theme") ||
                     (systemPrefersDark ? "dark" : "light");
                 setTheme(currentTheme === "dark" ? "light" : "dark");
             });
+
+            // Set social links from config
+            const footerLinks = document.querySelectorAll("#footer .social-links a");
+            if (footerLinks[0]) footerLinks[0].href = config.social.github;
+            if (footerLinks[1]) footerLinks[1].href = config.social.facebook;
+
+            // Router
+            const app = document.getElementById("app");
+
+            function renderHome() {
+                const postList = posts
+                    .map((post) => {
+                        return `    <li class="post-list-item">
+                            <a href="#/${post.slug}">${post.title}</a>
+                            <div class="post-meta">${post.date}</div>
+                        </li>`;
+                    })
+                    .join("\n");
+
+                app.innerHTML = `
+                    <p class="tagline">${config.tagline}</p>
+                    <div class="home-wrapper">
+                        <div>
+                            <h2>Posts</h2>
+                            <ul class="post-list">
+                                ${postList}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderPost(slug) {
+                const post = posts.find((p) => p.slug === slug);
+                if (!post) {
+                    renderHome();
+                    return;
+                }
+
+                app.innerHTML = `
+                    <article>
+                        <header class="post-header">
+                            <h1>${post.title}</h1>
+                            <div class="meta">
+                                <span class="date">${post.date}</span>
+                                <span class="description">${post.description}</span>
+                            </div>
+                        </header>
+                        <div class="content">${post.content}</div>
+                    </article>
+                `;
+            }
+
+            function router() {
+                const hash = window.location.hash.slice(1) || "/";
+
+                if (hash === "/") {
+                    renderHome();
+                } else if (hash === "/about") {
+                    app.innerHTML = `
+                        <article>
+                            <header class="post-header">
+                                <h1>About</h1>
+                            </header>
+                            <div class="content">
+                                ${aboutContent}
+                            </div>
+                        </article>
+                    `;
+                } else {
+                    const slug = hash.slice(1);
+                    renderPost(slug);
+                }
+
+                // Update page title
+                const post = posts.find((p) => hash === "/" + p.slug);
+                if (post) {
+                    document.title = `${post.title} - /supawat`;
+                } else if (hash === "/") {
+                    document.title = `/supawat`;
+                } else if (hash === "/about") {
+                    document.title = `About - /supawat`;
+                }
+            }
+
+            // Listen for hash changes
+            window.addEventListener("hashchange", router);
+
+            // Initial render
+            router();
         </script>
     </body>
 </html>

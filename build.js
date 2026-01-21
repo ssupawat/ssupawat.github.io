@@ -1,6 +1,11 @@
-const fs = require("fs");
-const path = require("path");
-const { marked } = require("marked");
+import fs from "fs";
+import path from "path";
+import { marked } from "marked";
+import config from "./blog.config.js";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const CONTENT_DIR = path.join(__dirname, "content");
 const TEMPLATE_DIR = path.join(__dirname, "templates");
@@ -78,29 +83,43 @@ function loadTemplate(name = "layout.html") {
   return fs.readFileSync(templatePath, "utf-8");
 }
 
-function renderPost(post, template) {
-  const html = marked(post.content);
-
-  return template
-    .replace(/\{\{title\}\}/g, post.title)
-    .replace(/\{\{date\}\}/g, post.date)
-    .replace(/\{\{description\}\}/g, post.description)
-    .replace(/\{\{content\}\}/g, html);
+function renderPost(post) {
+  return {
+    slug: post.slug,
+    title: post.title,
+    date: post.date,
+    description: post.description,
+    content: marked(post.content),
+  };
 }
 
-function renderHome(posts) {
-  const template = loadTemplate("home.html");
+function loadAboutPage() {
+  const aboutPath = path.join(__dirname, "about.md");
+  const aboutContent = fs.readFileSync(aboutPath, "utf-8");
+  const parsed = parseFrontmatter(aboutContent);
+  return marked(parsed.content);
+}
 
-  const postList = posts
-    .map((post) => {
-      return `    <li class="post-list-item">
-      <a href="/${post.slug}.html">${post.title}</a>
-      <div class="post-meta">${post.date}</div>
-    </li>`;
-    })
-    .join("\n");
+function renderSinglePage(posts) {
+  const template = loadTemplate("app.html");
 
-  return template.replace("{{postlist}}", postList);
+  // Convert posts to JSON for embedding in HTML
+  const postsJson = JSON.stringify(posts.map(renderPost));
+
+  // Load and convert about page
+  const aboutHtml = loadAboutPage();
+  const aboutJson = JSON.stringify(aboutHtml);
+
+  // Embed config data (without about)
+  const configJson = JSON.stringify({
+    tagline: config.tagline,
+    social: config.social,
+  });
+
+  return template
+    .replace("{{posts}}", postsJson)
+    .replace("{{about}}", aboutJson)
+    .replace("{{config}}", configJson);
 }
 
 function copyAssets() {
@@ -123,17 +142,8 @@ function build() {
   const posts = scanContent();
   console.log(`Found ${posts.length} posts`);
 
-  const template = loadTemplate();
-
-  posts.forEach((post) => {
-    const html = renderPost(post, template);
-    const outputPath = path.join(DIST_DIR, `${post.slug}.html`);
-    fs.writeFileSync(outputPath, html);
-    console.log(`  Generated ${post.slug}.html`);
-  });
-
-  const homeHtml = renderHome(posts, template);
-  fs.writeFileSync(path.join(DIST_DIR, "index.html"), homeHtml);
+  const indexHtml = renderSinglePage(posts);
+  fs.writeFileSync(path.join(DIST_DIR, "index.html"), indexHtml);
   console.log("  Generated index.html");
 
   copyAssets();

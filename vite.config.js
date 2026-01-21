@@ -85,9 +85,9 @@ export default defineConfig({
           let reqPath = urlPath === "/" ? "/index.html" : urlPath;
           let distPath = path.join(process.cwd(), "dist", reqPath);
 
-          // If no extension and file doesn't exist, try adding .html
-          if (!path.extname(reqPath) && !fs.existsSync(distPath)) {
-            distPath = path.join(process.cwd(), "dist", reqPath + ".html");
+          // Always serve index.html for SPA/hash routing
+          if (!path.extname(reqPath)) {
+            distPath = path.join(process.cwd(), "dist", "index.html");
           }
 
           // If it's a directory, try index.html
