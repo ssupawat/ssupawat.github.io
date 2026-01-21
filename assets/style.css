@@ -191,6 +191,13 @@ a:hover {
     margin: 0 0 1.5rem 0;
 }
 
+.content img {
+    display: block;
+    margin: 2rem auto;
+    max-width: 100%;
+    height: auto;
+}
+
 .content ul,
 .content ol {
     margin: 0 0 1.5rem 0;
