@@ -44,6 +44,33 @@ nav {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    align-items: center;
+}
+
+.menu {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.menu-icon {
+    color: var(--muted);
+    transition: color 0.2s ease;
+    cursor: pointer;
+    background: transparent !important;
+    border: none !important;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.menu-icon:hover {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.menu-icon svg {
+    display: block;
 }
 
 a {
@@ -53,6 +80,37 @@ a {
 
 a:hover {
     text-decoration: underline;
+}
+
+.logo {
+    font-family:
+        "Inter",
+        system-ui,
+        -apple-system,
+        sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    text-decoration: none !important;
+    display: flex;
+    align-items: baseline;
+    gap: 0.1rem;
+}
+
+.logo-slash {
+    color: var(--accent);
+    font-size: 2.2rem;
+    font-weight: 300;
+    transition: color 0.2s ease;
+}
+
+.logo-text {
+    color: var(--text);
+    transition: color 0.2s ease;
+}
+
+.logo:hover {
+    text-decoration: none !important;
+    opacity: 0.8;
 }
 
 .post-header {

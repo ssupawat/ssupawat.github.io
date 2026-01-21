@@ -9,10 +9,76 @@
     <body>
         <main class="container">
             <nav>
-                <a href="/" class="logo">/ssupawat</a>
+                <a href="/" class="logo">
+                    <span class="logo-slash">/</span>
+                    <span class="logo-text">supawat</span>
+                </a>
                 <div class="menu">
-                    <h1>About me</h1>
-                    <h1>Dark mode</h1>
+                    <a href="/about" class="menu-icon" aria-label="About me">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path
+                                d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"
+                            ></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </a>
+                    <button
+                        class="menu-icon"
+                        id="theme-toggle"
+                        aria-label="Toggle dark mode"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line
+                                x1="4.22"
+                                y1="4.22"
+                                x2="5.64"
+                                y2="5.64"
+                            ></line>
+                            <line
+                                x1="18.36"
+                                y1="18.36"
+                                x2="19.78"
+                                y2="19.78"
+                            ></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line
+                                x1="4.22"
+                                y1="19.78"
+                                x2="5.64"
+                                y2="18.36"
+                            ></line>
+                            <line
+                                x1="18.36"
+                                y1="5.64"
+                                x2="19.78"
+                                y2="4.22"
+                            ></line>
+                        </svg>
+                    </button>
                 </div>
             </nav>
 
@@ -79,5 +145,46 @@
                 </div>
             </footer>
         </main>
+        <script>
+            // Check for saved theme preference or default to system preference
+            const themeToggle = document.getElementById("theme-toggle");
+            const html = document.documentElement;
+
+            function setTheme(theme) {
+                if (theme === "dark") {
+                    html.style.setProperty("--bg", "#1a1a1a");
+                    html.style.setProperty("--text", "#e0e0e0");
+                    html.style.setProperty("--accent", "#66b2ff");
+                    html.style.setProperty("--muted", "#999999");
+                    localStorage.setItem("theme", "dark");
+                } else {
+                    html.style.setProperty("--bg", "#f9f9f9");
+                    html.style.setProperty("--text", "#2d2d2d");
+                    html.style.setProperty("--accent", "#0066cc");
+                    html.style.setProperty("--muted", "#666666");
+                    localStorage.setItem("theme", "light");
+                }
+            }
+
+            // Get initial theme
+            const savedTheme = localStorage.getItem("theme");
+            const systemPrefersDark = window.matchMedia(
+                "(prefers-color-scheme: dark)",
+            ).matches;
+
+            if (savedTheme) {
+                setTheme(savedTheme);
+            } else if (systemPrefersDark) {
+                setTheme("dark");
+            }
+
+            // Toggle theme on button click
+            themeToggle.addEventListener("click", () => {
+                const currentTheme =
+                    localStorage.getItem("theme") ||
+                    (systemPrefersDark ? "dark" : "light");
+                setTheme(currentTheme === "dark" ? "light" : "dark");
+            });
+        </script>
     </body>
 </html>
