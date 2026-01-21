@@ -52,6 +52,12 @@ function slugify(filename) {
 }
 
 function scanContent() {
+  // Check if content directory exists
+  if (!fs.existsSync(CONTENT_DIR)) {
+    console.log("No content directory found, starting with empty blog");
+    return [];
+  }
+
   const files = fs
     .readdirSync(CONTENT_DIR)
     .filter((file) => file.endsWith(".md"));
