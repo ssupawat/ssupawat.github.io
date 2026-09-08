@@ -7,8 +7,8 @@ export default {
   },
 
   social: {
-    github: "https://github.com/artsupawat",
-    facebook: "https://facebook.com/artsupawat",
+    github: "https://github.com/ssupawat",
+    facebook: "https://www.facebook.com/mynamesart",
   },
 
   og: {
