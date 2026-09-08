@@ -138,6 +138,7 @@ function renderSinglePage(posts) {
     .replace("{{about}}", aboutJson)
     .replace("{{config}}", configJson)
     .replace(/\{\{tagline\}\}/g, config.site.tagline)
+    .replace("{{projects}}", renderProjectsHtml())
     
 }
 
@@ -197,17 +198,63 @@ ${rendered
 </feed>`;
   fs.writeFileSync(path.join(DIST_DIR, "atom.xml"), atom);
 
-  // Sitemap
-  const urls = [siteUrl + "/"].concat(
-    rendered.map((p) => siteUrl + "/posts/" + p.slug + "/"),
-  );
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map((u) => `  <url><loc>${escapeXml(u)}</loc></url>`).join("\n")}
-</urlset>`;
-  fs.writeFileSync(path.join(DIST_DIR, "sitemap.xml"), sitemap);
+  // Sitemaps. The site's own pages go in sitemap-site.xml; sitemap.xml is an
+  // index pointing at that plus each project that publishes its own sitemap,
+  // so a project keeps ownership of its entries (aliasing-demo's carry hreflang
+  // alternates that would be duplicated if they were inlined here).
+  const projects = config.projects || [];
+  const projectUrl = (p) => siteUrl + "/" + String(p.path).replace(/^\/+|\/+$/g, "") + "/";
 
-  console.log("  Generated feed.json, atom.xml, sitemap.xml");
+  const siteUrls = [siteUrl + "/"]
+    .concat(rendered.map((p) => siteUrl + "/posts/" + p.slug + "/"))
+    .concat(projects.filter((p) => !p.sitemap).map(projectUrl));
+  const siteMapXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${siteUrls.map((u) => `  <url><loc>${escapeXml(u)}</loc></url>`).join("\n")}
+</urlset>`;
+  fs.writeFileSync(path.join(DIST_DIR, "sitemap-site.xml"), siteMapXml);
+
+  const indexed = [siteUrl + "/sitemap-site.xml"].concat(
+    projects.filter((p) => p.sitemap).map((p) => projectUrl(p) + "sitemap.xml"),
+  );
+  const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${indexed.map((u) => `  <sitemap><loc>${escapeXml(u)}</loc></sitemap>`).join("\n")}
+</sitemapindex>`;
+  fs.writeFileSync(path.join(DIST_DIR, "sitemap.xml"), sitemapIndex);
+
+  console.log("  Generated feed.json, atom.xml, sitemap.xml, sitemap-site.xml");
+}
+
+
+function generateRobots() {
+  const siteUrl = (config.site.url || "").replace(/\/+$/, "");
+  const robots = `User-agent: *
+Allow: /
+
+Sitemap: ${siteUrl}/sitemap.xml
+`;
+  fs.writeFileSync(path.join(DIST_DIR, "robots.txt"), robots);
+  console.log("  Generated robots.txt");
+}
+
+
+function renderProjectsHtml() {
+  const projects = config.projects || [];
+  if (!projects.length) return "";
+  const items = projects
+    .map((p) => {
+      const href = "/" + String(p.path).replace(/^\/+|\/+$/g, "") + "/";
+      return `<li><a href="${escapeXml(href)}">${escapeXml(p.name)}</a>` +
+        (p.description ? `<span>${escapeXml(p.description)}</span>` : "") + `</li>`;
+    })
+    .join("\n                        ");
+  return `<nav class="projects" aria-label="Projects">
+                    <h2>Projects</h2>
+                    <ul>
+                        ${items}
+                    </ul>
+                </nav>`;
 }
 
 
@@ -305,33 +352,65 @@ function generatePostPages(posts) {
     const coverSvg = generateCover(seed);
     fs.writeFileSync(path.join(slugDir, "cover.svg"), coverSvg);
 
+    const description = p.description || "";
+    const tagsHtml = (p.tags || [])
+      .map((t) => `<a href="${siteUrl}/#/tag/${encodeURIComponent(t)}">#${escapeXml(t)}</a>`)
+      .join(" ");
+
+    // This page carries the full post: it is the canonical, crawlable URL for
+    // the article. The SPA at /#/<slug> is the browse and search surface, but a
+    // fragment is not a separate URL to a search engine, so the text has to live
+    // here to be indexed at all. Social crawlers, which do not run JS, read the
+    // OG tags above and stop.
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${escapeXml(p.title)} — ${escapeXml(title)}</title>
-<meta name="description" content="${escapeXml(p.description)}">
+<meta name="description" content="${escapeXml(description)}">
+<link rel="canonical" href="${siteUrl}/posts/${p.slug}/">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <meta property="og:type" content="article">
 <meta property="og:title" content="${escapeXml(p.title)}">
-<meta property="og:description" content="${escapeXml(p.description)}">
+<meta property="og:description" content="${escapeXml(description)}">
 <meta property="og:image" content="${siteUrl}/assets/og-image.png">
 <meta property="og:url" content="${siteUrl}/posts/${p.slug}/">
+<meta property="article:published_time" content="${escapeXml(p.date || "")}">
 <meta name="twitter:card" content="summary_large_image">
-<script>location.replace("${siteUrl}/#/${p.slug}");</script>
+<link rel="alternate" type="application/atom+xml" href="${siteUrl}/atom.xml">
+<link rel="alternate" type="application/feed+json" href="${siteUrl}/feed.json">
 <style>
-body{font-family:"Inter",system-ui,-apple-system,sans-serif;max-width:700px;margin:3rem auto;padding:0 1.5rem;background:#F4F5F3;color:#151A21;line-height:1.7}
-h1{font-size:1.3rem;font-weight:600}
-.meta{color:#6B7280;font-size:.9rem;margin-bottom:1.5rem}
+body{font-family:"Inter","Noto Sans Thai",system-ui,-apple-system,sans-serif;max-width:700px;margin:0 auto;padding:3rem 1.5rem;background:#F4F5F3;color:#151A21;line-height:1.7}
+.site{font-family:"JetBrains Mono","SF Mono",Monaco,monospace;font-size:.9rem;margin:0 0 2rem}
+.site a{text-decoration:none;font-weight:600}
+h1{font-size:1.9rem;font-weight:600;line-height:1.25;margin:0 0 .5rem}
+h2{font-size:1.25rem;font-weight:600;margin:2.5rem 0 .75rem}
+h3{font-size:1.05rem;font-weight:600;margin:2rem 0 .5rem}
+.meta{font-family:"JetBrains Mono","SF Mono",Monaco,monospace;color:#6B7280;font-size:.85rem;margin:0 0 2rem}
+.meta a{color:#6B7280;text-decoration:none;margin-right:.4rem}
 a{color:#2F6F6A}
-.cover{margin-bottom:2rem}
-.cover svg{max-width:100%;height:auto}
-@media(prefers-color-scheme:dark){body{background:#151A21;color:#F4F5F3}.meta{color:#6B7280}a{color:#2F6F6A}}
+.cover{margin-bottom:2.5rem}
+.cover svg{max-width:100%;height:auto;display:block}
+article img{max-width:100%;height:auto}
+pre{background:rgba(128,128,128,.12);padding:1rem;border-radius:6px;overflow-x:auto;font-size:.85rem;line-height:1.5}
+code{font-family:"JetBrains Mono","SF Mono",Monaco,monospace;font-size:.9em}
+:not(pre)>code{background:rgba(128,128,128,.14);padding:.1em .35em;border-radius:3px}
+blockquote{margin:1.5rem 0;padding-left:1rem;border-left:3px solid rgba(128,128,128,.3);color:#6B7280}
+table{border-collapse:collapse;width:100%;overflow-x:auto;display:block}
+th,td{border:1px solid rgba(128,128,128,.3);padding:.4rem .6rem;text-align:left}
+hr{border:0;border-top:1px solid rgba(128,128,128,.25);margin:2.5rem 0}
+.back{margin-top:3rem;padding-top:1.5rem;border-top:1px solid rgba(128,128,128,.2);font-family:"JetBrains Mono","SF Mono",Monaco,monospace;font-size:.85rem}
+@media(prefers-color-scheme:dark){body{background:#151A21;color:#F4F5F3}}
 </style>
 </head>
 <body>
+<p class="site"><a href="${siteUrl}/">${escapeXml(title)}</a></p>
+<h1>${escapeXml(p.title)}</h1>
+<p class="meta">${escapeXml(p.date || "")}${tagsHtml ? " · " + tagsHtml : ""}</p>
 <div class="cover">${coverSvg}</div>
-<p><a href="${siteUrl}/#/${p.slug}">Read more →</a></p>
+<article>${p.content}</article>
+<p class="back"><a href="${siteUrl}/">← ${escapeXml(title)}</a></p>
 </body>
 </html>`;
 
@@ -396,6 +475,7 @@ function build() {
   generatePostPages(posts);
 
   generateOgImage();
+  generateRobots();
 
   copyAssets();
   console.log("  Copied assets");

@@ -464,3 +464,43 @@ a.post-nav-title:hover {
     font-size: 0.8rem;
     color: var(--muted);
 }
+
+/* Projects — standalone demos linked from the footer of every page.
+   The bare `nav` rule above lays the site header out as a flex row, so this
+   block has to opt back out of it. */
+.projects {
+    display: block;
+    margin-bottom: 2rem;
+}
+
+.projects h2 {
+    font-family: "JetBrains Mono", "SF Mono", "Monaco", monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 0.75rem 0;
+}
+
+.projects ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.projects li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.projects li span {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
