@@ -19,8 +19,28 @@ export default {
     {
       name: "Aliasing in sampling",
       path: "aliasing-demo",
-      description: "ทฤษฎีบท Nyquist แบบโต้ตอบ",
+      description: "Interactive Nyquist sampling theorem demo",
       sitemap: true,
+    },
+    {
+      name: "Monocle",
+      path: "monocle",
+      description: "Propositional logic playground with a DPLL solver",
+    },
+    {
+      name: "252330 BJT Amplifier Lab",
+      path: "lt-spice-bjt-amplifier-lab",
+      description: "LTspice + Python lab notebook for BJT amplifier stages",
+    },
+    {
+      name: "2 Digits",
+      path: "thai-lottery-2digit-stats",
+      description: "Thai lottery two-digit statistics, as a PWA",
+    },
+    {
+      name: "OT Calculator",
+      path: "overtime-calculator",
+      description: "Overtime pay calculator, as a PWA",
     },
   ],
 
