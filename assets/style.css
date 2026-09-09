@@ -96,6 +96,19 @@ a:hover {
     font-weight: 600;
     text-decoration: none !important;
     color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* The favicon, shown as the logo mark. It is a painting on a white ground, so
+   it keeps that ground in dark mode and gets a hairline instead of floating. */
+.logo-mark {
+    width: 1.5rem;
+    height: 1.5rem;
+    display: block;
+    border: 1px solid rgba(128, 128, 128, 0.25);
+    border-radius: 2px;
 }
 
 
