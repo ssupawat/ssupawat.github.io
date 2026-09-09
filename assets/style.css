@@ -147,6 +147,10 @@ a:hover {
     margin: 0 0 2.5rem 0;
 }
 
+.about-content {
+    margin-top: 1.5rem;
+}
+
 .post-header {
     margin-bottom: 1.5rem;
 }
