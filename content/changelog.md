@@ -18,8 +18,9 @@ function build() {
   fs.writeFileSync(path.join(DIST_DIR, "index.html"), indexHtml);
   generateFeeds(posts);
   generatePostPages(posts);
-  copyAssets();
   generateOgImage();
+  generateRobots();
+  copyAssets();
 }
 ```
 
@@ -267,7 +268,7 @@ shareBtn.addEventListener("click", () => {
 
 ## Feeds and Sitemap
 
-Generated at build time by `build.js`. JSON Feed 1.1, Atom 1.0, and Sitemap XML.
+Generated at build time by `build.js`. JSON Feed 1.1, Atom 1.0, `robots.txt`, and sitemaps.
 
 ```js
 const feed = {
@@ -286,22 +287,35 @@ const feed = {
 };
 ```
 
+`sitemap.xml` is an index rather than a flat list. `sitemap-site.xml` holds the home page, the posts, and any project without a sitemap of its own; a project that publishes one is referenced directly, so it keeps ownership of its own entries.
+
+`robots.txt` only counts at the origin root, which makes this repo the one place on the domain where it takes effect. A robots.txt committed inside a project repo is served under a subdirectory and ignored.
+
 ## Per-Post OG Pages
 
-Each post gets a static HTML page at `/posts/<slug>/index.html` with OG meta tags.
+Each post gets a static HTML page at `/posts/<slug>/index.html`. It is the canonical, crawlable address for the article: a `#/<slug>` fragment is not a separate URL to a search engine, so the text has to live here to be indexed at all.
 
 ```html
+<title>Post Title — art.</title>
+<meta name="description" content="Post description.">
+<link rel="canonical" href="https://ssupawat.github.io/posts/hello/">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Post Title">
 <meta property="og:description" content="Post description.">
-<meta property="og:image" content="https://ssupawat.github.io/blog/assets/og-image.png">
-<meta property="og:url" content="https://ssupawat.github.io/blog/posts/hello/">
+<meta property="og:image" content="https://ssupawat.github.io/assets/og-image.png">
+<meta property="og:url" content="https://ssupawat.github.io/posts/hello/">
+<meta property="article:published_time" content="2025-08-01">
 <meta name="twitter:card" content="summary_large_image">
 ```
 
-The body shows the post title, date, algorithmic cover art, and a "Read more →" link.
+The body carries the title, date, tags, the algorithmic cover, and the full post HTML — the same `p.content` that `renderPost` already hands to the feeds.
 
-**Why no redirect.** Earlier versions used `<meta http-equiv="refresh" content="0;url=...">`. Facebook's crawler followed the redirect before reading the OG tags, showing the generic site title instead of the post title. The landing page now has no redirect.
+**Two dead ends on the way here, and they pulled in opposite directions.** The first was `<meta http-equiv="refresh">`: Facebook's crawler followed the redirect before reading the OG tags and showed the generic site title instead of the post title.
+
+Replacing it with `location.replace()` fixed the preview — social crawlers do not run JS, so they read the head and stop — but broke indexing instead. Googlebot *does* run JS, follows the redirect, and drops the fragment on normalisation, so `/posts/<slug>/` resolved to the home page. The sitemap was asking for a URL that behaved like a redirect away from itself. And it would not have mattered either way: the body held a cover image and a "Read more" link, so there was nothing on the page to index.
+
+Both are gone. No redirect of any kind, and the article is on the page.
 
 ## Dark Mode
 
@@ -349,9 +363,11 @@ const hash = decodeURIComponent(window.location.hash.slice(1)) || "/";
 Relative asset paths instead of absolute:
 
 ```html
-<!-- Before: resolves to https://ssupawat.github.io/assets/style.css -->
+<!-- Absolute: resolves at the origin root, wherever the page is served from -->
 <link rel="stylesheet" href="/assets/style.css" />
 
-<!-- After: resolves to https://ssupawat.github.io/blog/assets/style.css -->
+<!-- Relative: resolves against the path the page is served from -->
 <link rel="stylesheet" href="assets/style.css" />
 ```
+
+The site is served from the origin root today, where both forms resolve the same way. The relative paths stayed anyway — they cost nothing, and the whole site can be remounted under a subdirectory without touching a single link.
