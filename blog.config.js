@@ -14,10 +14,13 @@ export default {
     facebook: "https://www.facebook.com/mynamesart",
   },
 
-  // Standalone demos published as GitHub Pages project sites. They share this
-  // origin, so linking them from here is what makes them reachable — both for
-  // readers and for crawlers, which otherwise have no path to them.
-  // `path` is the repo name; `sitemap: true` means it publishes its own.
+  // Things worth linking from the footer. Most are standalone demos published
+  // as GitHub Pages project sites: they share this origin, so linking them from
+  // here is what makes them reachable — both for readers and for crawlers,
+  // which otherwise have no path to them. `path` is the repo name, and
+  // `sitemap: true` means the project publishes its own.
+  // A project with no page on this origin uses `url` instead, which links
+  // straight out and stays out of this site's sitemap.
   projects: [
     {
       name: "Aliasing in sampling",
@@ -44,6 +47,11 @@ export default {
       name: "OT Calculator",
       path: "overtime-calculator",
       description: "Overtime pay calculator, as a PWA",
+    },
+    {
+      name: "DoToken",
+      url: "https://github.com/ssupawat/dotoken",
+      description: "macOS menu bar app tracking AI usage limits in real time",
     },
   ],
 

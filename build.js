@@ -214,7 +214,9 @@ ${rendered
   // index pointing at that plus each project that publishes its own sitemap,
   // so a project keeps ownership of its entries (aliasing-demo's carry hreflang
   // alternates that would be duplicated if they were inlined here).
-  const projects = config.projects || [];
+  // Only the projects hosted on this origin. One linked by `url` lives on
+  // someone else's host, and a sitemap may only claim URLs under its own.
+  const projects = (config.projects || []).filter((p) => p.path);
   const projectUrl = (p) => siteUrl + "/" + String(p.path).replace(/^\/+|\/+$/g, "") + "/";
 
   const siteUrls = [siteUrl + "/"]
@@ -256,7 +258,9 @@ function renderProjectsHtml() {
   if (!projects.length) return "";
   const items = projects
     .map((p) => {
-      const href = "/" + String(p.path).replace(/^\/+|\/+$/g, "") + "/";
+      // `path` is a project site on this origin; `url` is anything else, for a
+      // project that has no page here to link to.
+      const href = p.url || "/" + String(p.path).replace(/^\/+|\/+$/g, "") + "/";
       return `<li><a href="${escapeXml(href)}">${escapeXml(p.name)}</a>` +
         (p.description ? `<span>${escapeXml(p.description)}</span>` : "") + `</li>`;
     })
