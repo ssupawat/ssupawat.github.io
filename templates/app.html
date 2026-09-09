@@ -4,12 +4,12 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>art.</title>
-        <meta name="description" content="{{tagline}}" />
+        <meta name="description" content="{{description}}" />
 
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website" />
         <meta property="og:title" content="art." />
-        <meta property="og:description" content="{{tagline}}" />
+        <meta property="og:description" content="{{description}}" />
         <meta property="og:image" content="https://ssupawat.github.io/assets/og-image.png" />
         <meta property="og:url" content="https://ssupawat.github.io/" />
 
@@ -171,7 +171,7 @@
 
                 if (posts.length === 0) {
                     app.innerHTML = `
-                        <p class="tagline">${config.site.tagline}</p>
+                        ${config.site.tagline ? `<p class="tagline">${config.site.tagline}</p>` : ""}
                         <div class="home-wrapper">
                             <p class="empty-state">No posts yet. Check back soon!</p>
                         </div>
@@ -180,7 +180,7 @@
                 }
 
                 app.innerHTML = `
-                    <p class="tagline">${config.site.tagline}</p>
+                    ${config.site.tagline ? `<p class="tagline">${config.site.tagline}</p>` : ""}
                     <div class="home-wrapper">
                         <input
                             type="search"
@@ -308,10 +308,20 @@
             }
 
             function router() {
-                const hash = window.location.hash.slice(1) || "/";
+                // A malformed escape would otherwise throw and take the whole
+                // route with it, so fall back to the raw hash.
+                let raw = window.location.hash.slice(1);
+                let hash;
+                try {
+                    hash = decodeURIComponent(raw) || "/";
+                } catch (e) {
+                    hash = raw || "/";
+                }
 
                 if (hash === "/") {
                     renderHome();
+                } else if (hash.startsWith("/tag/")) {
+                    renderTaggedPosts(hash.slice(5));
                 } else if (hash === "/about") {
                     app.innerHTML = `
                         <article>

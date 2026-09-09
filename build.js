@@ -137,7 +137,7 @@ function renderSinglePage(posts) {
     .replace("{{posts}}", postsJson)
     .replace("{{about}}", aboutJson)
     .replace("{{config}}", configJson)
-    .replace(/\{\{tagline\}\}/g, config.site.tagline)
+    .replace(/\{\{description\}\}/g, config.site.description)
     .replace("{{projects}}", renderProjectsHtml())
     
 }
