@@ -386,7 +386,7 @@ a:hover {
 .search-input {
     width: 100%;
     padding: 0.4rem 0.2rem;
-    font-family: "JetBrains Mono", "SF Mono", "Monaco", monospace;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
     font-size: 0.95rem;
     color: var(--text);
     background: transparent;
