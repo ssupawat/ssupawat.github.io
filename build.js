@@ -149,6 +149,7 @@ function renderSinglePage(posts) {
     .replace("{{config}}", configJson)
     .replace(/\{\{description\}\}/g, config.site.description)
     .replace(/\{\{cssVersion\}\}/g, assetHash("style.css"))
+    .replace(/\{\{ogVersion\}\}/g, assetHash("og-image.png"))
     .replace("{{projects}}", renderProjectsHtml())
     
 }
@@ -491,7 +492,7 @@ function generatePostPages(posts) {
 <meta property="og:type" content="article">
 <meta property="og:title" content="${escapeXml(p.title)}">
 <meta property="og:description" content="${escapeXml(description)}">
-<meta property="og:image" content="${siteUrl}/assets/og-image.png">
+<meta property="og:image" content="${siteUrl}/assets/og-image.png?v=${assetHash("og-image.png")}">
 <meta property="og:url" content="${siteUrl}/posts/${p.slug}/">
 <meta property="article:published_time" content="${escapeXml(p.date || "")}">
 <meta name="twitter:card" content="summary_large_image">
@@ -584,6 +585,10 @@ function build() {
   const posts = scanContent();
   console.log(`Found ${posts.length} posts`);
 
+  // Ahead of the pages: they stamp the OG image's content hash into their
+  // og:image URL, so it has to exist in its final form before they are written.
+  generateOgImage();
+
   const indexHtml = renderSinglePage(posts);
   fs.writeFileSync(path.join(DIST_DIR, "index.html"), indexHtml);
   console.log("  Generated index.html");
@@ -591,7 +596,6 @@ function build() {
   generateFeeds(posts);
   generatePostPages(posts);
 
-  generateOgImage();
   generateRobots();
 
   copyAssets();
