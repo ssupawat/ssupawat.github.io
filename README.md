@@ -1,70 +1,69 @@
 # art.
 
-Personal site — writing, projects, demos. Built with vanilla JavaScript, no framework.
+Source for [ssupawat.github.io](https://ssupawat.github.io/). A static site with a small Node generator — no framework, no server.
 
-## Features
-
-- **Markdown posts** with YAML frontmatter — title, description, date, tags
-- **Tags** — per-post tags with YAML array frontmatter, shown on posts and in the post list
-- **Hash-based SPA** — single `index.html`, no server routing
-- **Client-side search** — filters posts by title, description, and body on each keystroke
-- **Prev/next navigation** between posts
-- **Share button** — copies canonical URL or opens native share sheet
-- **Algorithmic cover art** — Mondrian-style recursive subdivision, unique per post
-- **Per-post OG pages** — static HTML at `/posts/<slug>/` for social previews
-- **JSON Feed, Atom, Sitemap** — generated at build time
-- **Dark mode** — respects system preference, toggled from nav, persisted
-- **Thai language support** — Noto Sans Thai, Unicode-aware slugifier
-- **Two-font system** — Inter for prose, JetBrains Mono for metadata
-- **Material Symbols** for icons, with SVG brand logos (GitHub, Facebook)
-- **Live reload** in dev via Vite
-
-## Stack
-
-```
-content/          → Markdown posts with frontmatter
-templates/        → app.html (SPA shell)
-assets/           → style.css, favicon, OG image
-build.js          → static generator (Node, no dependencies beyond marked)
-blog.config.js    → single config file for site, social, OG
-vite.config.js    → dev server with live reload
-```
-
-`build.js` reads content, renders Markdown with `marked`, generates `dist/index.html` (embedded posts JSON + SPA), per-post OG pages, feeds, sitemap, and rasterizes the OG image via Chrome headless.
-
-## Getting Started
+## Run it
 
 ```bash
 npm install
-npm run dev        # → http://localhost:3000
-npm run build      # → dist/
+npm run dev      # http://localhost:3000, rebuilds on change
+npm run build    # → dist/
 ```
 
-Changes to `content/`, `templates/`, `assets/`, or `blog.config.js` trigger auto-rebuild and reload.
+Pushing to `main` builds and deploys to GitHub Pages.
 
-## Creating Content
+## Where to change things
+
+| To | Edit |
+| --- | --- |
+| Write a post | add `content/<slug>.md` |
+| Edit the About page | `about.md` |
+| Change the tagline or the home page meta description | `site.tagline` / `site.description` in `blog.config.js` |
+| List another project | add to `projects` in `blog.config.js` |
+| Change the logo mark and tab icon | `assets/favicon.svg` — one file is both |
+| Restyle | `assets/style.css` |
+| Change page structure or routing | `templates/app.html` |
+
+### Post frontmatter
 
 ```markdown
 ---
-title: "Your Post Title"
-description: "Brief summary"
-date: "2025-08-01"
+title: "Title"
+description: "One line, used as the post's meta description"
+date: "2026-01-31"
 tags:
-  - tag1
-  - tag2
+  - notes
 ---
-
-Your content here. Markdown, code blocks, whatever.
 ```
 
-## Configuration
+`tags` must be a block list. `tags: [notes]` on one line is read as a string, not an array — the parser in `build.js` only walks indented `- ` lines.
 
-All in `blog.config.js`:
+### Projects
 
-- `site` — name, tagline, URL, repo
-- `social` — GitHub, Facebook links
-- `og` — OG image seed and dimensions
+`projects` drives both the Projects list in the footer and the sitemap:
 
-## Deploy
+```js
+{ name: "Aliasing in sampling", path: "aliasing-demo", description: "…", sitemap: true }
+```
 
-GitHub Actions builds and deploys to Pages on every push to `main`.
+`path` is the repo name; the project is served at `https://ssupawat.github.io/<path>/`. Set `sitemap: true` only when that project publishes its own `sitemap.xml`, in which case it is referenced from the sitemap index rather than listed as a bare URL.
+
+## Things that are easy to get wrong
+
+- **`robots.txt` only counts at the origin root.** This repo is the one place on `ssupawat.github.io` where it takes effect — a robots.txt committed inside a project repo is served under a subdirectory and ignored.
+- **`sitemap.xml` is an index, not a list.** Site pages live in `sitemap-site.xml`; projects with their own sitemap are referenced from the index.
+- **A `#/…` fragment is not a separate URL to a crawler.** That is why `/posts/<slug>/` carries the whole article rather than a stub — the SPA is the browse surface, those pages are the addresses.
+- **`build.js` never cleans `dist/`.** A local build can leave pages behind from content you deleted. CI is unaffected; it builds from a fresh checkout.
+- **The OG image only regenerates where Chrome is at the macOS path** hard-coded in `generateOgImage()`. Everywhere else the committed `assets/og-image.png` is reused, which is why it is in git.
+
+## Layout
+
+```
+content/         posts — markdown with frontmatter
+about.md         the About page
+templates/       app.html, the SPA shell
+assets/          style.css, favicon.svg, og-image.png
+blog.config.js   site, social, projects
+build.js         the generator
+vite.config.js   dev server, rebuilds on change
+```
