@@ -11,7 +11,7 @@
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
         --bg: #151A21;
-        --text: #F4F5F3;
+        --text: #DDE1E4;
         /* 6.87:1 on the dark ground. The same #6B7280 was only 3.61:1 there,
            which made secondary text hard to read and left it looking unrelated
            to the body copy beside it. */
@@ -22,7 +22,7 @@
 /* An explicit choice from the toggle wins either way. */
 :root[data-theme="dark"] {
     --bg: #151A21;
-    --text: #F4F5F3;
+    --text: #DDE1E4;
     --muted: #9BA3AF;
 }
 
