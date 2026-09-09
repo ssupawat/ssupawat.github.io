@@ -170,12 +170,9 @@
                 const query = (filter || "").trim().toLowerCase();
 
                 if (posts.length === 0) {
-                    app.innerHTML = `
-                        ${config.site.tagline ? `<p class="tagline">${config.site.tagline}</p>` : ""}
-                        <div class="home-wrapper">
-                            <p class="empty-state">No posts yet. Check back soon!</p>
-                        </div>
-                    `;
+                    app.innerHTML = config.site.tagline
+                        ? `<p class="tagline">${config.site.tagline}</p>`
+                        : "";
                     return;
                 }
 
