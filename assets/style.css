@@ -2,17 +2,28 @@
     --bg: #F4F5F3;
     --text: #151A21;
     --accent: #2F6F6A;
-    --muted: #6B7280;
+    /* 5.29:1 on --bg. The previous #6B7280 was 4.42:1, under WCAG AA. */
+    --muted: #5F6672;
     --container-width: 700px;
 }
 
+/* System preference, unless the toggle has explicitly asked for light. */
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         --bg: #151A21;
         --text: #F4F5F3;
-        --accent: #2F6F6A;
-        --muted: #6B7280;
+        /* 6.87:1 on the dark ground. The same #6B7280 was only 3.61:1 there,
+           which made secondary text hard to read and left it looking unrelated
+           to the body copy beside it. */
+        --muted: #9BA3AF;
     }
+}
+
+/* An explicit choice from the toggle wins either way. */
+:root[data-theme="dark"] {
+    --bg: #151A21;
+    --text: #F4F5F3;
+    --muted: #9BA3AF;
 }
 
 * {

@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { marked } from "marked";
@@ -117,6 +118,15 @@ function loadAboutPage() {
   return marked(parsed.content);
 }
 
+// Short content hash of an asset, used to version its URL so a changed file is
+// never served from cache under the old one.
+function assetHash(name) {
+  const file = path.join(ASSETS_DIR, name);
+  if (!fs.existsSync(file)) return "0";
+  return crypto.createHash("sha1").update(fs.readFileSync(file)).digest("hex").slice(0, 8);
+}
+
+
 function renderSinglePage(posts) {
   const template = loadTemplate("app.html");
 
@@ -138,6 +148,7 @@ function renderSinglePage(posts) {
     .replace("{{about}}", aboutJson)
     .replace("{{config}}", configJson)
     .replace(/\{\{description\}\}/g, config.site.description)
+    .replace(/\{\{cssVersion\}\}/g, assetHash("style.css"))
     .replace("{{projects}}", renderProjectsHtml())
     
 }

@@ -18,7 +18,7 @@
 
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" />
         <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
-        <link rel="stylesheet" href="assets/style.css" />
+        <link rel="stylesheet" href="assets/style.css?v={{cssVersion}}" />
         <link rel="alternate" type="application/atom+xml" title="art." href="atom.xml" />
         <link rel="alternate" type="application/json" title="art." href="feed.json" />
         <link rel="sitemap" type="application/xml" title="Sitemap" href="sitemap.xml" />
@@ -103,24 +103,13 @@
             const themeToggle = document.getElementById("theme-toggle");
             const html = document.documentElement;
 
+            // Only the choice lives here; the colours belong to the
+            // stylesheet, which keys off this attribute.
             function setTheme(theme) {
-                if (theme === "dark") {
-                    html.style.setProperty("--bg", "#151A21");
-                    html.style.setProperty("--text", "#F4F5F3");
-                    html.style.setProperty("--accent", "#2F6F6A");
-                    html.style.setProperty("--muted", "#6B7280");
-                    localStorage.setItem("theme", "dark");
-                    const ti = document.getElementById("theme-icon");
-                    if (ti) ti.textContent = "dark_mode";
-                } else {
-                    html.style.setProperty("--bg", "#F4F5F3");
-                    html.style.setProperty("--text", "#151A21");
-                    html.style.setProperty("--accent", "#2F6F6A");
-                    html.style.setProperty("--muted", "#6B7280");
-                    localStorage.setItem("theme", "light");
-                    const ti = document.getElementById("theme-icon");
-                    if (ti) ti.textContent = "light_mode";
-                }
+                html.setAttribute("data-theme", theme);
+                localStorage.setItem("theme", theme);
+                const ti = document.getElementById("theme-icon");
+                if (ti) ti.textContent = theme === "dark" ? "dark_mode" : "light_mode";
             }
 
             const savedTheme = localStorage.getItem("theme");

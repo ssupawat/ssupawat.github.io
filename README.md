@@ -53,6 +53,7 @@ tags:
 - **`robots.txt` only counts at the origin root.** This repo is the one place on `ssupawat.github.io` where it takes effect — a robots.txt committed inside a project repo is served under a subdirectory and ignored.
 - **`sitemap.xml` is an index, not a list.** Site pages live in `sitemap-site.xml`; projects with their own sitemap are referenced from the index.
 - **A `#/…` fragment is not a separate URL to a crawler.** That is why `/posts/<slug>/` carries the whole article rather than a stub — the SPA is the browse surface, those pages are the addresses.
+- **Theme colours live only in `assets/style.css`.** The toggle sets `data-theme` on `<html>`; it must not write colours inline, or the stylesheet loses. `style.css` is served with a content hash in its URL, so a change always reaches the browser.
 - **`build.js` never cleans `dist/`.** A local build can leave pages behind from content you deleted. CI is unaffected; it builds from a fresh checkout.
 - **The OG image only regenerates where Chrome is at the macOS path** hard-coded in `generateOgImage()`. Everywhere else the committed `assets/og-image.png` is reused, which is why it is in git.
 
