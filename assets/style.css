@@ -130,7 +130,7 @@ a:hover {
 
 .tagline {
     color: var(--muted);
-    font-family: "JetBrains Mono", "SF Mono", "Monaco", monospace;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
     font-size: 1.05rem;
     text-transform: lowercase;
     margin: 0 0 2.5rem 0;
@@ -217,7 +217,7 @@ a:hover {
 }
 
 .content h3 {
-    font-family: "JetBrains Mono", "SF Mono", "Monaco", monospace;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
     font-size: 1.1rem;
     font-weight: 600;
     margin: 2rem 0 1rem 0;
@@ -313,9 +313,8 @@ a:hover {
 
 .home-wrapper h2,
 .projects h2 {
-    font-family: "JetBrains Mono", "SF Mono", "Monaco", monospace;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
     font-size: 1.2rem;
-    letter-spacing: 0.05em;
     color: var(--text);
     font-weight: 600;
     margin: 0 0 0.75rem 0;
