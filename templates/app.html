@@ -77,16 +77,7 @@
                         class="social-icon"
                         aria-label="RSS feed"
                         data-social="rss"
-                    ><span class="material-symbols-outlined">rss_feed</span>
-                    </a>
-                    <a
-                        href=""
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="social-icon"
-                        aria-label="View source"
-                        data-social="source"
-                    ><span class="material-symbols-outlined">terminal</span>
+                    ><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
                     </a>
                 </div>
             </footer>
@@ -142,7 +133,6 @@
             setSocial("github", config.social.github);
             setSocial("facebook", config.social.facebook);
             setSocial("rss", config.site.url ? config.site.url + "/atom.xml" : "");
-            setSocial("source", config.site.repo || "");
 
             // Router
             const app = document.getElementById("app");

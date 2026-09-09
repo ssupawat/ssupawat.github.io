@@ -376,13 +376,20 @@ a:hover {
 
 .social-links {
     display: flex;
-    gap: 1.5rem;
+    align-items: center;
+    /* 1rem here plus the 0.25rem padding on each icon reads as the same
+       24px gap as before, while giving each link a 28px hit area. */
+    gap: 1rem;
     justify-content: center;
 }
 
 .social-icon {
     color: var(--muted);
     transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
 }
 
 .social-icon:hover {
@@ -392,10 +399,6 @@ a:hover {
 
 .social-icon svg {
     display: block;
-}
-
-.social-icon .material-symbols-outlined {
-    font-size: 20px;
 }
 
 .search-input {

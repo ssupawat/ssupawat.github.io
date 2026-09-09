@@ -7,7 +7,6 @@ export default {
     description:
       "Interactive demos and small tools by Supawat Sornwai — signal processing, logic, voice agents, and things built to understand them.",
     url: "https://ssupawat.github.io",
-    repo: "https://github.com/ssupawat/ssupawat.github.io",
   },
 
   social: {
