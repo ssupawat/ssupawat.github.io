@@ -2,10 +2,10 @@ export default {
   site: {
     name: "art.",
     // Shown above the post list. Leave empty to render no tagline at all.
-    tagline: "demos, tools, and notes",
+    tagline: "small things, built to understand bigger ones",
     // Used for the home page meta description and og:description.
     description:
-      "Interactive demos, small tools and notes by Supawat Sornwai — signal processing, logic, voice agents, and things built to understand them.",
+      "Interactive demos and small tools by Supawat Sornwai — signal processing, logic, voice agents, and things built to understand them.",
     url: "https://ssupawat.github.io",
     repo: "https://github.com/ssupawat/ssupawat.github.io",
   },
