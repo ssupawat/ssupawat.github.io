@@ -1,10 +1,10 @@
-import { execSync } from "child_process";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { marked } from "marked";
 import config from "./blog.config.js";
 import { fileURLToPath } from "url";
+import zlib from "zlib";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -269,29 +269,113 @@ function renderProjectsHtml() {
 }
 
 
+// The OG image used to be a headless-Chrome --screenshot of the same SVG the
+// covers use. Chrome exits 0 even when it cannot load the page, so a run that
+// failed to read the file still "succeeded": it wrote a screenshot of Chrome's
+// own error page over assets/og-image.png — into the source tree, not dist —
+// and that got committed. The art is nothing but axis-aligned rectangles, so
+// rasterising it here is both simpler and deterministic, and unlike a browser
+// it is actually available in CI.
 function generateOgImage() {
-  const svg = mondrianSVG(config.og.width, config.og.height, config.og.seed, 0, "", false);
-
-  const svgPath = path.join(DIST_DIR, "_og.svg");
-  const pngPath = path.join(__dirname, "assets", "og-image.png");
-  fs.writeFileSync(svgPath, svg);
-
-  try {
-    const chrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-    fs.mkdirSync(path.dirname(pngPath), { recursive: true });
-    execSync(
-      `"${chrome}" --headless=new --disable-gpu --force-device-scale-factor=1 --window-size=1200,630 --screenshot="${pngPath}" "file://${svgPath}"`,
-      { stdio: "pipe", timeout: 10000 },
-    );
-    console.log("  Generated OG image");
-  } catch {
-    console.log("  OG image: Chrome not available, using existing PNG");
-  }
-
-  try { fs.unlinkSync(svgPath); } catch {}
+  const { width: W, height: H, seed } = config.og;
+  const rgb = rasterize(mondrianOps(W, H, seed, 0, "", false), W, H);
+  const pngPath = path.join(ASSETS_DIR, "og-image.png");
+  fs.mkdirSync(path.dirname(pngPath), { recursive: true });
+  fs.writeFileSync(pngPath, encodePNG(W, H, rgb));
+  console.log("  Generated OG image");
 }
 
-function mondrianSVG(W, H, seed, pad, bg, invert) {
+function hexToRgb(hex) {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h;
+  return [
+    parseInt(full.slice(0, 2), 16),
+    parseInt(full.slice(2, 4), 16),
+    parseInt(full.slice(4, 6), 16),
+  ];
+}
+
+// Paints the ops in order onto an opaque white canvas. Every op is an
+// axis-aligned rectangle, so per-pixel coverage is just the overlap of the two
+// spans — that is what antialiases the fractional edges of the split lines.
+function rasterize(ops, W, H) {
+  const rgb = Buffer.alloc(W * H * 3, 0xff);
+  for (const op of ops) {
+    const [r, g, b] = hexToRgb(op.fill);
+    const left = op.x, right = op.x + op.w, top = op.y, bottom = op.y + op.h;
+    const x0 = Math.max(0, Math.floor(left)), x1 = Math.min(W, Math.ceil(right));
+    const y0 = Math.max(0, Math.floor(top)), y1 = Math.min(H, Math.ceil(bottom));
+    for (let y = y0; y < y1; y++) {
+      const cy = Math.min(y + 1, bottom) - Math.max(y, top);
+      if (cy <= 0) continue;
+      for (let x = x0; x < x1; x++) {
+        const cx = Math.min(x + 1, right) - Math.max(x, left);
+        if (cx <= 0) continue;
+        const a = op.opacity * cx * cy;
+        const i = (y * W + x) * 3;
+        rgb[i] = Math.round(rgb[i] + (r - rgb[i]) * a);
+        rgb[i + 1] = Math.round(rgb[i + 1] + (g - rgb[i + 1]) * a);
+        rgb[i + 2] = Math.round(rgb[i + 2] + (b - rgb[i + 2]) * a);
+      }
+    }
+  }
+  return rgb;
+}
+
+const CRC_TABLE = (() => {
+  const t = new Int32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c;
+  }
+  return t;
+})();
+
+function crc32(buf) {
+  let c = -1;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ -1) >>> 0;
+}
+
+function pngChunk(type, data) {
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length);
+  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([len, body, crc]);
+}
+
+// 8-bit truecolour, one IDAT, filter 0 on every scanline. The art is flat
+// colour, so deflate does the compressing and per-line filters buy nothing.
+function encodePNG(W, H, rgb) {
+  const stride = W * 3 + 1;
+  const raw = Buffer.alloc(stride * H);
+  for (let y = 0; y < H; y++) {
+    raw[y * stride] = 0;
+    rgb.copy(raw, y * stride + 1, y * W * 3, (y + 1) * W * 3);
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(W, 0);
+  ihdr.writeUInt32BE(H, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // colour type: truecolour
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", zlib.deflateSync(raw, { level: 9 })),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+// The art is a list of axis-aligned, alpha-blended rectangles. Keeping it as
+// data rather than as an SVG string is what lets the OG rasteriser and the
+// cover SVGs share one definition instead of drifting apart. Strokes become
+// explicit rects here: a stroke straddles its path, so each one is centred on
+// the edge it draws, and the border's sides stop short of the corners so the
+// overlap does not paint twice at 0.95 opacity.
+function mondrianOps(W, H, seed, pad, bg, invert) {
   function hash(x, y) {
     let h = (x * 374761393 + y * 668265263 + seed) | 0;
     h = ((h ^ (h >> 13)) * 1274126177) | 0;
@@ -304,39 +388,61 @@ function mondrianSVG(W, H, seed, pad, bg, invert) {
   const sw = pad < 10 ? 1.5 : 2;
   const lw = pad < 10 ? 0.5 : 1;
   const minSz = pad < 10 ? 4 : 20;
+  const rule = invert ? bg || "#F4F5F3" : line;
 
-  let inner = "";
+  const ops = [];
+  const add = (x, y, w, h, fill, opacity) => ops.push({ x, y, w, h, fill, opacity });
+
   if (invert) {
-    inner += `<rect width="${W}" height="${H}" fill="${red}"/>`;
+    add(0, 0, W, H, red, 1);
   } else {
-    inner += `<rect width="${W}" height="${H}" fill="#FFF"/>`;
-    inner += `<rect x="${pad}" y="${pad}" width="${W - pad * 2}" height="${H - pad * 2}" fill="none" stroke="${line}" stroke-width="${sw}" opacity="0.95"/>`;
+    add(0, 0, W, H, "#FFF", 1);
+    const half = sw / 2;
+    const x0 = pad - half, y0 = pad - half;
+    const x1 = W - pad - half, y1 = H - pad - half;
+    const span = W - pad * 2 + sw;
+    add(x0, y0, span, sw, line, 0.95);                              // top
+    add(x0, y1, span, sw, line, 0.95);                              // bottom
+    add(x0, pad + half, sw, H - pad * 2 - sw, line, 0.95);          // left
+    add(x1, pad + half, sw, H - pad * 2 - sw, line, 0.95);          // right
   }
 
   function split(x, y, w, h, depth, id) {
     if (depth > 3 || w < minSz * 2 || h < minSz * 2) {
       if (hash(id, 0) > 0.15) {
         const fill = invert ? bg || "#F4F5F3" : fills[Math.floor(hash(id, 3) * fills.length)];
-        const op = 0.3 + hash(id, 1) * 0.55;
-        inner += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" opacity="${op.toFixed(2)}"/>`;
+        add(x, y, w, h, fill, +(0.3 + hash(id, 1) * 0.55).toFixed(2));
       }
       return;
     }
     const ratio = 0.3 + hash(id, 2) * 0.4;
+    const op = invert ? 0.3 : 0.6;
     if (hash(id, 3) > 0.5) {
       const sx = x + w * ratio;
-      inner += `<line x1="${sx}" y1="${y}" x2="${sx}" y2="${y + h}" stroke="${invert ? (bg || "#F4F5F3") : line}" stroke-width="${lw}" opacity="${invert ? 0.3 : 0.6}"/>`;
+      add(sx - lw / 2, y, lw, h, rule, op);
       split(x, y, sx - x, h, depth + 1, id * 2);
       split(sx, y, x + w - sx, h, depth + 1, id * 2 + 1);
     } else {
       const sy = y + h * ratio;
-      inner += `<line x1="${x}" y1="${sy}" x2="${x + w}" y2="${sy}" stroke="${invert ? (bg || "#F4F5F3") : line}" stroke-width="${lw}" opacity="${invert ? 0.3 : 0.6}"/>`;
+      add(x, sy - lw / 2, w, lw, rule, op);
       split(x, y, w, sy - y, depth + 1, id * 2);
       split(x, sy, w, y + h - sy, depth + 1, id * 2 + 1);
     }
   }
   split(pad, pad, W - pad * 2, H - pad * 2, 0, 1);
+  return ops;
+}
+
+function opsToSVG(ops, W, H) {
+  const n = (v) => +v.toFixed(3);
+  const inner = ops
+    .map((o) => `<rect x="${n(o.x)}" y="${n(o.y)}" width="${n(o.w)}" height="${n(o.h)}" fill="${o.fill}" opacity="${o.opacity}"/>`)
+    .join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${inner}</svg>`;
+}
+
+function mondrianSVG(W, H, seed, pad, bg, invert) {
+  return opsToSVG(mondrianOps(W, H, seed, pad, bg, invert), W, H);
 }
 
 function generateCover(seed) {
