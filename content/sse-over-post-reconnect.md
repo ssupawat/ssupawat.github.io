@@ -49,7 +49,7 @@ record of that work any pod can read.
 I built [reconnectable-sse](https://github.com/ssupawat/reconnectable-sse) to
 try it out. My production endpoint is Python. This was a concept I wanted to
 test, so the language was free, and I used it as an excuse to get familiar with
-Go. Read it for the shape.
+Go. The shape is the part I was after.
 
 I got the idea down to two lines:
 
