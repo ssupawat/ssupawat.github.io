@@ -1,6 +1,6 @@
 ---
 title: "Fixing an SSE stream that dies at two minutes"
-description: "I wired up AG-UI's reference endpoint and it ran, until my streams started dying at two minutes. Keepalives did nothing for me, and the timeout was never mine to raise."
+description: "I wired up AG-UI's reference endpoint and it ran. Then my streams started dying at two minutes. Keepalives did nothing, and the timeout was never mine to raise."
 date: "2026-09-10"
 tags:
   - sse
@@ -8,44 +8,44 @@ tags:
   - redis
 ---
 
-I got a chance to serve an [AG-UI](https://docs.ag-ui.com) endpoint, and
-started where the protocol points. AG-UI's
+I got a chance to serve an [AG-UI](https://docs.ag-ui.com) endpoint. I started
+where the protocol points. AG-UI's
 [LangGraph integration](https://github.com/ag-ui-protocol/ag-ui/blob/main/integrations/langgraph/python/ag_ui_langgraph/endpoint.py)
 ships a helper that registers the endpoint. It calls `@app.post(path)` and
-returns a `StreamingResponse`. I wired it into my backend and it ran.
+returns a `StreamingResponse`. I wired it into my backend, and it ran.
 
-Then I started losing streams. About two minutes into a run the stream would
-stop, leaving half an answer on the client.
+Then I started losing streams. About two minutes into a run, the stream would
+stop. The client was left with half an answer.
 
-My first guess was an idle timeout: something in front hanging up on a stream
-that had gone quiet. The standard fix for that is a keepalive, so the
-connection never looks idle. I added one and still lost the stream at two
+My first guess was an idle timeout. Something in front was hanging up on a
+stream that had gone quiet. The standard fix is a keepalive. It stops the
+connection from looking idle. I added one, and I still lost the stream at two
 minutes.
 
-So whatever sits in front counts the age of the connection and hangs up at two
+So whatever sits in front counts the age of the connection. It hangs up at two
 minutes, whether or not bytes are moving. I asked the infra team to raise the
-limit and they turned me down. I never did learn which layer sets that number.
+limit, and they turned me down. I never did learn which layer sets that number.
 
 That settled the shape of the problem. Every run longer than two minutes gets
-cut, and I have to survive it from my side.
+cut. I have to survive it from my side.
 
-Normally the browser would reconnect for me. `EventSource` does it for free: it
-retries on its own and sends back a `Last-Event-ID` header naming the last
-event it saw, so the server can carry on from there. I could not use any of it.
-That machinery is GET only, and AG-UI answers on POST, which puts me on `fetch`
-and a `ReadableStream`. Those will stream a response. Recovering one is my job.
+Normally the browser would reconnect for me. `EventSource` does it for free. It
+retries on its own. It sends back a `Last-Event-ID` header. That header names
+the last event the client saw. The server carries on from there. I could
+not use any of it. That machinery is GET only. AG-UI answers on POST, so I am
+on `fetch` and a `ReadableStream`. Those will stream a response. Recovering one
+is my job.
 
-The second wall came right behind the first. My endpoint runs on several pods,
-so even with reconnect written by hand, the retry goes through the load
-balancer and lands wherever it lands. A half-finished run living in the process
-that started it can only be answered by that process, which puts me back to
-pinning traffic with sticky sessions.
+The second wall came right behind the first. My endpoint runs on several pods.
+The retry goes through the load balancer, and it lands wherever it lands. If
+the half-finished run lives in the process that started it, only that process
+can answer. Then I am back to pinning traffic with sticky sessions.
 
-So I needed two things. Work that keeps going after the client is gone, and a
-record of that work any pod can read.
+So I needed two things. The work has to keep going after the client is gone.
+Any pod has to be able to read a record of it.
 
 I built [reconnectable-sse](https://github.com/ssupawat/reconnectable-sse) to
-try it out. My production endpoint is Python, and this was a concept, so the
+try it out. My production endpoint is Python. This was a concept, so the
 language was free. I used it as an excuse to get familiar with Go. The shape is
 the part that matters.
 
@@ -59,10 +59,11 @@ if !streamExists(r.Context(), key) {
 runSSEResponse(r.Context(), streamID, lastEventID, w, flusher)
 ```
 
-I give `runSSEResponse` the request context, so a disconnect stops it, which is
+I give `runSSEResponse` the request context. A disconnect stops it. That is
 what I want, since there is nobody left to write to. `runEventGenerator` gets
-`context.Background()` and keeps running. Hand it the request context instead
-and the disconnect kills the work itself, leaving nothing to come back to.
+`context.Background()`, and it keeps running. Hand it the request context
+instead, and the disconnect kills the work itself. Then nothing is left to come
+back to.
 
 <figure style="margin:2.25rem 0;overflow-x:auto">
 <svg viewBox="0 0 720 372" width="720" role="img" aria-label="Sequence diagram: a client streams from api-1, drops, and reconnects through api-2, which reads the same Redis stream from the client's last event id while api-1's generator keeps running." style="max-width:100%;min-width:560px;height:auto;display:block">
@@ -132,24 +133,24 @@ and the disconnect kills the work itself, leaving nothing to come back to.
 </g>
 </svg>
 <figcaption style="font-size:.85rem;opacity:.7;margin-top:.85rem;line-height:1.5">
-The shaded band is api-1's generator. It starts on the first request and runs to
-completion on <code>context.Background()</code>, through the drop, through the
-reconnect, and regardless of the fact that api-2 is the one talking to the
-client now.
+The shaded band is api-1's generator. It starts on the first request and runs
+to completion on <code>context.Background()</code>. It keeps going through the
+drop and the reconnect, even though api-2 is the one talking to the client
+now.
 </figcaption>
 </figure>
 
 Resume then came down to an offset. Redis returns an entry id on every `XADD`.
-That id goes out as the SSE `id:`, the client sends it back on the retry, and
-it goes into `XREAD` as the starting point. No cursor table, no bookkeeping.
-The id the client is holding is the offset.
+That id goes out as the SSE `id`. The client sends it back on the retry. It
+goes into `XREAD` as the starting point. There is no cursor table and no
+bookkeeping. The id the client is holding is the offset.
 
-I ran it and it does what I wanted. A client can drop mid-stream, come back
-through a different pod, and pick up where it stopped.
+I ran it. It does what I wanted. A client can drop mid-stream. It comes back
+through a different pod and picks up where it stopped.
 
-I left edges in it. The generator starts under a check-then-act, so two
-concurrent first requests with the same stream id can both start one. Nothing
-cancels a generator whose client stays away. And I made the client remember its
-last event id across the drop.
+I left edges in it. The generator starts under a check-then-act. Two concurrent
+first requests with the same stream id can both start one. Nothing cancels a
+generator whose client stays away. And I made the client remember its last
+event id across the drop.
 
 Design, endpoints, and how to run it: [github.com/ssupawat/reconnectable-sse](https://github.com/ssupawat/reconnectable-sse)
