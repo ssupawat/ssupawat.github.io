@@ -53,6 +53,11 @@ export default {
       url: "https://github.com/ssupawat/dotoken",
       description: "macOS menu bar app tracking AI usage limits in real time",
     },
+    {
+      name: "Reconnectable SSE",
+      url: "https://github.com/ssupawat/reconnectable-sse",
+      description: "SSE streams that resume on any pod after a drop, via Redis Streams",
+    },
   ],
 
   og: {
