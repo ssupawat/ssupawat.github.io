@@ -114,6 +114,13 @@ function loadTemplate(name) {
 // an outer fence keeps its example, because marked sees one code block there.
 const missingDiagrams = [];
 
+// The dev server rebuilds on every keystroke-triggered save. Editing a mermaid
+// fence changes its hash, so its SVG is missing until `npm run diagrams` runs
+// again, and exiting there would kill the server exactly while a diagram is
+// being worked on. Warn and carry on in dev; fail everywhere else, so a stale
+// diagram still cannot ship.
+const DEV = process.env.BLOG_DEV === "1";
+
 marked.use({
   renderer: {
     code(code, infostring) {
@@ -125,7 +132,10 @@ marked.use({
         // renderer in a "report this to marked" notice, which sends the reader
         // to the wrong place. reportMissingDiagrams() has the real advice.
         missingDiagrams.push(path.relative(__dirname, svgFile));
-        return "";
+        return DEV
+          ? `<figure class="wide-figure"><p><em>Diagram not rendered yet. ` +
+            `Run <code>npm run diagrams</code>.</em></p></figure>\n`
+          : "";
       }
       const svg = fs.readFileSync(svgFile, "utf8");
       const cap = caption ? `<figcaption>${marked.parseInline(caption)}</figcaption>` : "";
@@ -134,12 +144,19 @@ marked.use({
   },
 });
 
+// Posts are rendered at three call sites, so say this once per run. In dev
+// each rebuild is a fresh process, so the next save reports again.
+let reportedMissing = false;
+
 function reportMissingDiagrams() {
-  if (!missingDiagrams.length) return;
-  console.error("\nMissing rendered diagram(s) for mermaid fences:");
+  if (!missingDiagrams.length || reportedMissing) return;
+  reportedMissing = true;
+  console.error(DEV
+    ? "\nDiagram(s) not rendered yet:"
+    : "\nMissing rendered diagram(s) for mermaid fences:");
   for (const f of new Set(missingDiagrams)) console.error("  " + f);
-  console.error("\n  Run `npm run diagrams` and commit content/diagrams/.\n");
-  process.exit(1);
+  console.error("\n  Run `npm run diagrams`" + (DEV ? ".\n" : " and commit content/diagrams/.\n"));
+  if (!DEV) process.exit(1);
 }
 
 function renderPost(post) {
