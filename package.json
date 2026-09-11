@@ -5,7 +5,8 @@
   "scripts": {
     "build": "node build.js",
     "dev": "vite",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "diagrams": "node scripts/render-diagrams.mjs"
   },
   "dependencies": {
     "marked": "^12.0.0"

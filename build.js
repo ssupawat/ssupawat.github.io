@@ -2,6 +2,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { marked } from "marked";
+import { splitCaption, hashSource, diagramPath } from "./lib/diagrams.mjs";
 import config from "./blog.config.js";
 import { fileURLToPath } from "url";
 import zlib from "zlib";
@@ -100,8 +101,34 @@ function loadTemplate(name) {
   return fs.readFileSync(templatePath, "utf-8");
 }
 
+// A ```mermaid fence is authored in the post and rendered ahead of time by
+// `npm run diagrams`, which writes a themed SVG keyed by a hash of the fence.
+// The build swaps the fence for that SVG before markdown is parsed, since
+// marked passes raw HTML through untouched.
+//
+// Rendering here instead would put puppeteer and a 300MB Chromium in every CI
+// deploy, and client-side mermaid would leave the crawlable post page without
+// a diagram at all.
+function expandDiagrams(markdown, file) {
+  return markdown.replace(/```mermaid\n([\s\S]*?)```/g, (_, fence) => {
+    const { caption, source } = splitCaption(fence);
+    const svgFile = diagramPath(__dirname, hashSource(source));
+    if (!fs.existsSync(svgFile)) {
+      console.error(
+        `\nMissing rendered diagram for a mermaid fence in ${file}.\n` +
+        `  expected: ${path.relative(__dirname, svgFile)}\n` +
+        `  Run \`npm run diagrams\` and commit content/diagrams/.\n`
+      );
+      process.exit(1);
+    }
+    const svg = fs.readFileSync(svgFile, "utf8");
+    const cap = caption ? `<figcaption>${marked.parseInline(caption)}</figcaption>` : "";
+    return `<figure class="wide-figure">\n${svg}\n${cap}\n</figure>`;
+  });
+}
+
 function renderPost(post) {
-  const content = marked(post.content);
+  const content = marked(expandDiagrams(post.content, post.slug + ".md"));
   return {
     slug: post.slug,
     title: post.title,

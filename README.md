@@ -68,3 +68,19 @@ blog.config.js   site, social, projects
 build.js         the generator
 vite.config.js   dev server, rebuilds on change
 ```
+
+### Diagrams
+
+Write a diagram as a ```mermaid fence in the post. Caption it with a mermaid comment, which mermaid ignores:
+
+```
+%% caption: What the diagram shows. Inline `code` is fine.
+sequenceDiagram
+    ...
+```
+
+`npm run diagrams` renders each fence to `content/diagrams/<hash>.svg` and commits-ready output goes in that directory. `npm run build` inlines the SVG and fails with the command to run if one is missing, so a stale diagram cannot ship.
+
+Rendering is a manual step on purpose. mermaid-cli drives Chromium, and `npm ci` in the deploy workflow would otherwise fetch ~300MB on every push, so it is pulled through `npx` and stays out of `package.json`. Set `MERMAID_CHROMIUM` to reuse a browser you already have.
+
+The rendered SVG is re-coloured to `currentColor` by overriding mermaid's own class names, which is what lets one file serve the light and dark pages. Mermaid's theme engine cannot take `currentColor` directly, since it computes derived shades from each value.
