@@ -103,32 +103,47 @@ function loadTemplate(name) {
 
 // A ```mermaid fence is authored in the post and rendered ahead of time by
 // `npm run diagrams`, which writes a themed SVG keyed by a hash of the fence.
-// The build swaps the fence for that SVG before markdown is parsed, since
-// marked passes raw HTML through untouched.
+// The build swaps the fence for that SVG.
 //
 // Rendering here instead would put puppeteer and a 300MB Chromium in every CI
 // deploy, and client-side mermaid would leave the crawlable post page without
 // a diagram at all.
-function expandDiagrams(markdown, file) {
-  return markdown.replace(/```mermaid\n([\s\S]*?)```/g, (_, fence) => {
-    const { caption, source } = splitCaption(fence);
-    const svgFile = diagramPath(__dirname, hashSource(source));
-    if (!fs.existsSync(svgFile)) {
-      console.error(
-        `\nMissing rendered diagram for a mermaid fence in ${file}.\n` +
-        `  expected: ${path.relative(__dirname, svgFile)}\n` +
-        `  Run \`npm run diagrams\` and commit content/diagrams/.\n`
-      );
-      process.exit(1);
-    }
-    const svg = fs.readFileSync(svgFile, "utf8");
-    const cap = caption ? `<figcaption>${marked.parseInline(caption)}</figcaption>` : "";
-    return `<figure class="wide-figure">\n${svg}\n${cap}\n</figure>`;
-  });
+//
+// This hooks marked's renderer rather than matching ``` pairs in the raw text,
+// so nesting is the tokeniser's problem. A post showing a mermaid fence inside
+// an outer fence keeps its example, because marked sees one code block there.
+const missingDiagrams = [];
+
+marked.use({
+  renderer: {
+    code(code, infostring) {
+      if (infostring !== "mermaid") return false; // default renderer handles it
+      const { caption, source } = splitCaption(code);
+      const svgFile = diagramPath(__dirname, hashSource(source));
+      if (!fs.existsSync(svgFile)) {
+        // Collected rather than thrown: marked wraps an exception from a
+        // renderer in a "report this to marked" notice, which sends the reader
+        // to the wrong place. reportMissingDiagrams() has the real advice.
+        missingDiagrams.push(path.relative(__dirname, svgFile));
+        return "";
+      }
+      const svg = fs.readFileSync(svgFile, "utf8");
+      const cap = caption ? `<figcaption>${marked.parseInline(caption)}</figcaption>` : "";
+      return `<figure class="wide-figure">\n${svg}\n${cap}\n</figure>\n`;
+    },
+  },
+});
+
+function reportMissingDiagrams() {
+  if (!missingDiagrams.length) return;
+  console.error("\nMissing rendered diagram(s) for mermaid fences:");
+  for (const f of new Set(missingDiagrams)) console.error("  " + f);
+  console.error("\n  Run `npm run diagrams` and commit content/diagrams/.\n");
+  process.exit(1);
 }
 
 function renderPost(post) {
-  const content = marked(expandDiagrams(post.content, post.slug + ".md"));
+  const content = marked(post.content);
   return {
     slug: post.slug,
     title: post.title,
@@ -172,6 +187,7 @@ function renderSinglePage(posts) {
 
   // Convert posts to JSON for embedding in HTML
   const postsJson = JSON.stringify(posts.map(renderPost));
+  reportMissingDiagrams();
 
   // Load and convert about page
   const aboutHtml = loadAboutPage();
@@ -207,6 +223,7 @@ function generateFeeds(posts) {
   const siteUrl = (config.site.url || "").replace(/\/+$/, "");
   const title = config.site.name;
   const rendered = posts.map(renderPost);
+  reportMissingDiagrams();
 
   // JSON Feed 1.1
   const feed = {
@@ -498,6 +515,7 @@ function generatePostPages(posts) {
   const siteUrl = (config.site.url || "").replace(/\/+$/, "");
   const title = config.site.name;
   const rendered = posts.map(renderPost);
+  reportMissingDiagrams();
 
   const postsDir = path.join(DIST_DIR, "posts");
   fs.mkdirSync(postsDir, { recursive: true });
