@@ -2,6 +2,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { marked } from "marked";
+import { splitCaption, hashSource, diagramPath } from "./lib/diagrams.mjs";
 import config from "./blog.config.js";
 import { fileURLToPath } from "url";
 import zlib from "zlib";
@@ -100,15 +101,86 @@ function loadTemplate(name) {
   return fs.readFileSync(templatePath, "utf-8");
 }
 
+// A ```mermaid fence is authored in the post and rendered ahead of time by
+// `npm run diagrams`, which writes a themed SVG keyed by a hash of the fence.
+// The build swaps the fence for that SVG.
+//
+// Rendering here instead would put puppeteer and a 300MB Chromium in every CI
+// deploy, and client-side mermaid would leave the crawlable post page without
+// a diagram at all.
+//
+// This hooks marked's renderer rather than matching ``` pairs in the raw text,
+// so nesting is the tokeniser's problem. A post showing a mermaid fence inside
+// an outer fence keeps its example, because marked sees one code block there.
+const missingDiagrams = [];
+
+// The dev server rebuilds on every keystroke-triggered save. Editing a mermaid
+// fence changes its hash, so its SVG is missing until `npm run diagrams` runs
+// again, and exiting there would kill the server exactly while a diagram is
+// being worked on. Warn and carry on in dev; fail everywhere else, so a stale
+// diagram still cannot ship.
+const DEV = process.env.BLOG_DEV === "1";
+
+marked.use({
+  renderer: {
+    code(code, infostring) {
+      if (infostring !== "mermaid") return false; // default renderer handles it
+      const { caption, source } = splitCaption(code);
+      const svgFile = diagramPath(__dirname, hashSource(source));
+      if (!fs.existsSync(svgFile)) {
+        // Collected rather than thrown: marked wraps an exception from a
+        // renderer in a "report this to marked" notice, which sends the reader
+        // to the wrong place. reportMissingDiagrams() has the real advice.
+        missingDiagrams.push(path.relative(__dirname, svgFile));
+        return DEV
+          ? `<figure class="wide-figure"><p><em>Diagram not rendered yet. ` +
+            `Run <code>npm run diagrams</code>.</em></p></figure>\n`
+          : "";
+      }
+      const svg = fs.readFileSync(svgFile, "utf8");
+      const cap = caption ? `<figcaption>${marked.parseInline(caption)}</figcaption>` : "";
+      return `<figure class="wide-figure">\n${svg}\n${cap}\n</figure>\n`;
+    },
+  },
+});
+
+// Posts are rendered at three call sites, so say this once per run. In dev
+// each rebuild is a fresh process, so the next save reports again.
+let reportedMissing = false;
+
+function reportMissingDiagrams() {
+  if (!missingDiagrams.length || reportedMissing) return;
+  reportedMissing = true;
+  console.error(DEV
+    ? "\nDiagram(s) not rendered yet:"
+    : "\nMissing rendered diagram(s) for mermaid fences:");
+  for (const f of new Set(missingDiagrams)) console.error("  " + f);
+  console.error("\n  Run `npm run diagrams`" + (DEV ? ".\n" : " and commit content/diagrams/.\n"));
+  if (!DEV) process.exit(1);
+}
+
 function renderPost(post) {
+  const content = marked(post.content);
   return {
     slug: post.slug,
     title: post.title,
     date: post.date,
     description: post.description,
     tags: post.tags || [],
-    content: marked(post.content),
+    content,
+    feedContent: forFeed(content),
   };
+}
+
+// Feed readers strip <style> and inline <svg> but keep the text inside them,
+// so a stylesheet arrives as a paragraph of CSS and a diagram as a run of
+// stray labels. Remove both. The figcaption stays and says what the diagram
+// showed, and the post page still carries the real thing.
+function forFeed(html) {
+  return html
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, "")
+    .trim();
 }
 
 function loadAboutPage() {
@@ -132,6 +204,7 @@ function renderSinglePage(posts) {
 
   // Convert posts to JSON for embedding in HTML
   const postsJson = JSON.stringify(posts.map(renderPost));
+  reportMissingDiagrams();
 
   // Load and convert about page
   const aboutHtml = loadAboutPage();
@@ -167,6 +240,7 @@ function generateFeeds(posts) {
   const siteUrl = (config.site.url || "").replace(/\/+$/, "");
   const title = config.site.name;
   const rendered = posts.map(renderPost);
+  reportMissingDiagrams();
 
   // JSON Feed 1.1
   const feed = {
@@ -181,7 +255,7 @@ function generateFeeds(posts) {
       title: p.title,
       date_published: p.date,
       summary: p.description,
-      content_html: p.content,
+      content_html: p.feedContent,
     })),
   };
   fs.writeFileSync(path.join(DIST_DIR, "feed.json"), JSON.stringify(feed, null, 2));
@@ -203,7 +277,7 @@ ${rendered
     <link href="${siteUrl}/posts/${p.slug}/"/>
     <updated>${p.date}</updated>
     <summary>${escapeXml(p.description)}</summary>
-    <content type="html">${escapeXml(p.content)}</content>
+    <content type="html">${escapeXml(p.feedContent)}</content>
   </entry>`,
       )
       .join("\n")}
@@ -458,6 +532,7 @@ function generatePostPages(posts) {
   const siteUrl = (config.site.url || "").replace(/\/+$/, "");
   const title = config.site.name;
   const rendered = posts.map(renderPost);
+  reportMissingDiagrams();
 
   const postsDir = path.join(DIST_DIR, "posts");
   fs.mkdirSync(postsDir, { recursive: true });
@@ -515,6 +590,10 @@ a{color:#2F6F6A}
 .cover{margin-bottom:2.5rem}
 .cover svg{max-width:100%;height:auto;display:block}
 article img{max-width:100%;height:auto}
+.wide-figure{margin:2.25rem 0;overflow-x:auto}
+.wide-figure svg{max-width:100%;min-width:560px;height:auto;display:block}
+.wide-figure figcaption{font-size:.85rem;opacity:.7;margin-top:.85rem;line-height:1.5}
+@media(min-width:1060px){.wide-figure{width:920px;margin-left:calc((920px - 100%) / -2);overflow-x:visible}.wide-figure svg{min-width:0}}
 pre{background:rgba(128,128,128,.12);padding:1rem;border-radius:6px;overflow-x:auto;font-size:.85rem;line-height:1.5}
 code{font-family:"JetBrains Mono","SF Mono",Monaco,monospace;font-size:.9em}
 :not(pre)>code{background:rgba(128,128,128,.14);padding:.1em .35em;border-radius:3px}

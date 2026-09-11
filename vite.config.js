@@ -6,7 +6,13 @@ import path from "path";
 // Run the custom build script
 function runBuild() {
   console.log("\n🔄 Running custom build...");
-  execSync("node build.js", { stdio: "inherit" });
+  execSync("node build.js", {
+    stdio: "inherit",
+    // Editing a mermaid fence changes its hash, so its SVG is missing until
+    // `npm run diagrams` runs again. That should not take the dev server down
+    // mid-edit, so the build warns here and still fails hard everywhere else.
+    env: { ...process.env, BLOG_DEV: "1" },
+  });
   console.log("✅ Build complete\n");
 }
 
@@ -33,6 +39,7 @@ export default defineConfig({
       name: "custom-build-and-watch",
       buildStart() {
         // Only run build in development mode
+        if (process.env.NODE_ENV !== "production") {
           runBuild();
         }
       },

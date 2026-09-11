@@ -535,3 +535,38 @@ a.post-nav-title:hover {
     color: var(--muted);
     font-size: 0.85rem;
 }
+
+/* A diagram with four lifelines outgrows the 700px column. On a wide screen it
+   reaches into the gutters either side, centred, by half of what it gains. The
+   percentage resolves against the column, so the same rule serves this layout
+   and the static post page, whose box models differ. */
+.wide-figure {
+    margin: 2.25rem 0;
+    overflow-x: auto;
+}
+
+.wide-figure svg {
+    max-width: 100%;
+    min-width: 560px;
+    height: auto;
+    display: block;
+}
+
+.wide-figure figcaption {
+    font-size: .85rem;
+    opacity: .7;
+    margin-top: .85rem;
+    line-height: 1.5;
+}
+
+@media (min-width: 1060px) {
+    .wide-figure {
+        width: 920px;
+        margin-left: calc((920px - 100%) / -2);
+        overflow-x: visible;
+    }
+
+    .wide-figure svg {
+        min-width: 0;
+    }
+}
