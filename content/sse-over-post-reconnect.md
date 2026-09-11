@@ -71,6 +71,8 @@ nothing is left to come back to.
 ```mermaid
 %% caption: The shaded band is api-1's generator. It starts on the first request and runs to completion on `context.Background()`. It keeps going through the drop and the reconnect, even though api-2 is the one talking to the client now.
 sequenceDiagram
+    accTitle: Resuming an SSE stream across pods
+    accDescr: A client streams from api-1 and drops mid-response. It reconnects through api-2, which reads the same Redis stream from the client's last event id, while api-1's generator keeps running throughout.
     participant C as client
     participant A1 as api-1
     participant A2 as api-2
