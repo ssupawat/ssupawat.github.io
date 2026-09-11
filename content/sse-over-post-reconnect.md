@@ -66,7 +66,8 @@ I give `runSSEResponse` the request context. A disconnect stops it. That is
 what I want, since there is nobody left to write to. Meanwhile
 `runEventGenerator` gets `context.Background()`, and it keeps running. Hand it
 the request context instead, and the disconnect kills the work itself. Then
-nothing is left to come back to.
+nothing is left to come back to. The run also has to finish and write its
+history to the database. Whether anyone is still watching is beside the point.
 
 ```mermaid
 %% caption: The shaded band is api-1's generator. It starts on the first request and runs to completion on `context.Background()`. It keeps going through the drop and the reconnect, even though api-2 is the one talking to the client now.
@@ -102,8 +103,7 @@ I ran it. It does what I wanted. After a drop mid-stream, a client comes back
 through a different pod and picks up where it stopped.
 
 Still, I left edges in it. The generator starts under a check-then-act. So two
-concurrent first requests with the same stream id can both start one. Also,
-nothing cancels a generator whose client stays away. And I made the client
-remember its last event id across the drop.
+concurrent first requests with the same stream id can both start one. And I
+made the client remember its last event id across the drop.
 
 Design, endpoints, and how to run it: [github.com/ssupawat/reconnectable-sse](https://github.com/ssupawat/reconnectable-sse)
