@@ -101,14 +101,27 @@ function loadTemplate(name) {
 }
 
 function renderPost(post) {
+  const content = marked(post.content);
   return {
     slug: post.slug,
     title: post.title,
     date: post.date,
     description: post.description,
     tags: post.tags || [],
-    content: marked(post.content),
+    content,
+    feedContent: forFeed(content),
   };
+}
+
+// Feed readers strip <style> and inline <svg> but keep the text inside them,
+// so a stylesheet arrives as a paragraph of CSS and a diagram as a run of
+// stray labels. Remove both. The figcaption stays and says what the diagram
+// showed, and the post page still carries the real thing.
+function forFeed(html) {
+  return html
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, "")
+    .trim();
 }
 
 function loadAboutPage() {
@@ -181,7 +194,7 @@ function generateFeeds(posts) {
       title: p.title,
       date_published: p.date,
       summary: p.description,
-      content_html: p.content,
+      content_html: p.feedContent,
     })),
   };
   fs.writeFileSync(path.join(DIST_DIR, "feed.json"), JSON.stringify(feed, null, 2));
@@ -203,7 +216,7 @@ ${rendered
     <link href="${siteUrl}/posts/${p.slug}/"/>
     <updated>${p.date}</updated>
     <summary>${escapeXml(p.description)}</summary>
-    <content type="html">${escapeXml(p.content)}</content>
+    <content type="html">${escapeXml(p.feedContent)}</content>
   </entry>`,
       )
       .join("\n")}
@@ -515,6 +528,10 @@ a{color:#2F6F6A}
 .cover{margin-bottom:2.5rem}
 .cover svg{max-width:100%;height:auto;display:block}
 article img{max-width:100%;height:auto}
+.wide-figure{margin:2.25rem 0;overflow-x:auto}
+.wide-figure svg{max-width:100%;min-width:560px;height:auto;display:block}
+.wide-figure figcaption{font-size:.85rem;opacity:.7;margin-top:.85rem;line-height:1.5}
+@media(min-width:1060px){.wide-figure{width:920px;margin-left:calc((920px - 100%) / -2);overflow-x:visible}.wide-figure svg{min-width:0}}
 pre{background:rgba(128,128,128,.12);padding:1rem;border-radius:6px;overflow-x:auto;font-size:.85rem;line-height:1.5}
 code{font-family:"JetBrains Mono","SF Mono",Monaco,monospace;font-size:.9em}
 :not(pre)>code{background:rgba(128,128,128,.14);padding:.1em .35em;border-radius:3px}

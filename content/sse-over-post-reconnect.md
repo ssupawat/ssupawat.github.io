@@ -68,21 +68,7 @@ what I want, since there is nobody left to write to. Meanwhile
 the request context instead, and the disconnect kills the work itself. Then
 nothing is left to come back to.
 
-<style>
-.sse-figure { margin: 2.25rem 0; overflow-x: auto; }
-.sse-figure svg { max-width: 100%; min-width: 560px; height: auto; display: block; }
-.sse-figure figcaption { font-size: .85rem; opacity: .7; margin-top: .85rem; line-height: 1.5; }
-/* On a wide screen the 700px column wastes the gutters, and this diagram has
-   four lifelines to fit. Pull it out past the column, centred, by half of what
-   it gains. The percentage resolves against the column, so it adapts to
-   whichever of the two layouts is rendering it. */
-@media (min-width: 1060px) {
-  .sse-figure { width: 920px; margin-left: calc((920px - 100%) / -2); overflow-x: visible; }
-  .sse-figure svg { min-width: 0; }
-}
-</style>
-
-<figure class="sse-figure">
+<figure class="wide-figure">
 <svg viewBox="0 0 720 372" width="920" role="img" aria-label="Sequence diagram: a client streams from api-1, drops, and reconnects through api-2, which reads the same Redis stream from the client's last event id while api-1's generator keeps running.">
 <defs>
 <marker id="sse-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
