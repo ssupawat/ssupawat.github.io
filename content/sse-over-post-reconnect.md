@@ -103,7 +103,6 @@ I ran it. It does what I wanted. After a drop mid-stream, a client comes back
 through a different pod and picks up where it stopped.
 
 Still, I left edges in it. The generator starts under a check-then-act. So two
-concurrent first requests with the same stream id can both start one. And I
-made the client remember its last event id across the drop.
+concurrent first requests with the same stream id can both start one.
 
 Design, endpoints, and how to run it: [github.com/ssupawat/reconnectable-sse](https://github.com/ssupawat/reconnectable-sse)
