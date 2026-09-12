@@ -11,13 +11,13 @@ MQTT fans a topic out. Every client subscribed to it gets a copy of every
 message. That is the point of the protocol, and most of the time it is what I
 want too.
 
-It is not what I want when the subscriber is doing work. My messages were
-arriving faster than one consumer could handle them. So I started a second one.
-It did nothing for the backlog. Both consumers now had the whole stream. I had
-doubled the work.
+It is not what I wanted here. I had a Kafka consumer group in mind: several
+consumers on one topic, the messages split between them, each one handled once.
+I went looking for how to do that in MQTT.
 
-What I wanted was a queue's behaviour: each message handled once, by whichever
-consumer is free. There are two ways to get it. I built both, in
+The short answer is no on v3.1.1, which is what I was on. There is no consumer
+group in the protocol. So the question turned into what to do
+instead, and I found two answers and built both, in
 [mqtt-client-load-balancing](https://github.com/ssupawat/mqtt-client-load-balancing),
 one on a branch each.
 
@@ -28,9 +28,8 @@ partition key.
 
 I picked three partitions. My publisher appends a partition number to the topic
 on every message, chosen at random. Each consumer then subscribes to a single
-partition.
-Every message still goes to exactly one subscriber, because no two of them
-subscribe to the same topic.
+partition. Every message still goes to exactly one subscriber, because no two
+of them subscribe to the same topic.
 
 ```mermaid
 %% caption: The publisher picks the partition, so nothing about the split lives in the broker. `demoTopic/partition2` reaches consumer2 because it is the only client subscribed to it.
@@ -82,26 +81,38 @@ $share/<group>/topic
 ```
 
 `$share` marks it as shared, `<group>` names the group, and the rest is the
-topic I want. Consumers that give the same group and the same topic
-form one group, and the broker delivers each message to one member of it.
+topic I want. Consumers that give the same group and the same topic form one
+group. The broker delivers each message to one member of it.
+
+Which member is the broker's business. The spec does not name an algorithm.
+Mosquitto, which the demo runs on, goes round-robin. So the delivery is a
+rotation. A consumer that is still busy gets its turn anyway.
+
+A group does not change what anyone outside it sees. The demo keeps a couple of
+subscribers on plain `demoTopic` to show it: they go on receiving every
+message, while the three in the group split their own copy between them.
 
 ```mermaid
-%% caption: The publisher is unchanged. It still publishes to plain `demoTopic`. The `$share` prefix is on the subscribe side only, and the broker does the rotation.
+%% caption: The three in the group hold `$share/shared-subscriber-group/demoTopic` and split the stream. The plain sub holds `demoTopic` with no prefix and still gets all of it. The publisher is unchanged either way. It publishes to plain `demoTopic`, because `$share` is a subscribe-side prefix.
 sequenceDiagram
     accTitle: Load balancing an MQTT topic with a v5 shared subscription
-    accDescr: Three consumers subscribe to the same shared subscription group for demoTopic. The publisher publishes to demoTopic and the broker delivers each message to one member of the group in rotation.
+    accDescr: Three consumers subscribe to one shared subscription group for demoTopic and receive its messages in rotation. A fourth subscriber outside the group subscribes to demoTopic directly and receives every message.
     participant P as publisher
     participant B as broker
+    participant X as plain sub
     participant C1 as consumer1
     participant C2 as consumer2
     participant C3 as consumer3
 
-    Note over C1,C3: all three subscribe to $share/group/demoTopic
+    Note over C1,C3: one $share group on demoTopic
     P->>B: publish demoTopic
+    B->>X: deliver
     B->>C1: deliver
     P->>B: publish demoTopic
+    B->>X: deliver
     B->>C2: deliver
     P->>B: publish demoTopic
+    B->>X: deliver
     B->>C3: deliver
 ```
 
@@ -109,8 +120,10 @@ Scaling out is now what I wanted. I start another consumer, give it the same
 group, and the broker starts including it in the rotation. Nothing on the
 publishing side changes, because it never knew how many consumers there were.
 
-The cost is a version floor. Shared subscriptions are v5. My consumers have to
-speak v5, and my broker has to support them.
+The cost is a version floor. Shared subscriptions are v5. The prefix lives on
+the subscribe side, so the consumers and the broker have to speak it.
+Publishers are not in the way. That sounds like a small bill until someone asks
+who is holding the versions.
 
 ## What it comes down to
 
@@ -122,8 +135,17 @@ across the fleet, and changing it means changing all of it. A shared
 subscription puts the decision in the broker, and the publishers never learn
 about it. That is why the consumer side can be resized on its own.
 
-So the first approach is what I fall back on when I am stuck on v3.1.1. If v5
-is available on both ends, I take the shared subscription.
+So MQTT has no consumer group on v3.1.1, and something close to one on v5.
+That is the answer to the question I started with.
+
+We never took it. v5 was out by then, but our devices had already shipped on
+v3.1.1. The broker was not moving either. I no longer remember why. The devices
+on their own would not have stopped us, since a publisher never sees the
+prefix. The broker did.
+
+So the shared subscription stayed a branch in this repository. Partitioning was
+the only one of the two I could actually have used, at the price above: every
+publisher in on the scheme, and a rollout to the fleet to change it.
 
 Both branches run under Docker Compose, and the consumer logs show the split:
 [github.com/ssupawat/mqtt-client-load-balancing](https://github.com/ssupawat/mqtt-client-load-balancing)
