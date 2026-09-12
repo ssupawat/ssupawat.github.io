@@ -564,7 +564,7 @@ function generatePostPages(posts) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${escapeXml(p.title)} — ${escapeXml(title)}</title>
+<title>${escapeXml(p.title)} · ${escapeXml(title)}</title>
 <meta name="description" content="${escapeXml(description)}">
 <link rel="canonical" href="${siteUrl}/posts/${p.slug}/">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">

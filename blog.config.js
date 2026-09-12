@@ -5,7 +5,7 @@ export default {
     tagline: "projects and notes",
     // Used for the home page meta description and og:description.
     description:
-      "Interactive demos and small tools by Supawat Sornwai — signal processing, logic, voice agents, and things built to understand them.",
+      "Interactive demos and small tools by Supawat Sornwai: signal processing, logic, voice agents, and things built to understand them.",
     url: "https://ssupawat.github.io",
   },
 

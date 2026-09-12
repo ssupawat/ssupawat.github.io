@@ -321,11 +321,11 @@
                 // Update page title
                 const post = posts.find((p) => hash === "/" + p.slug);
                 if (post) {
-                    document.title = `${post.title} - art.`;
+                    document.title = `${post.title} · art.`;
                 } else if (hash === "/") {
                     document.title = `art.`;
                 } else if (hash === "/about") {
-                    document.title = `art. - About Me`;
+                    document.title = `About · art.`;
                 }
             }
 
