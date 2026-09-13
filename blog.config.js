@@ -14,6 +14,11 @@ export default {
     facebook: "https://www.facebook.com/mynamesart",
   },
 
+  analytics: {
+    // The CODE in https://CODE.goatcounter.com. Empty emits no analytics at all.
+    goatcounter: "ssupawat",
+  },
+
   // Things worth linking from the footer. Most are standalone demos published
   // as GitHub Pages project sites: they share this origin, so linking them from
   // here is what makes them reachable — both for readers and for crawlers,

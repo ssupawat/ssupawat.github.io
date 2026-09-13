@@ -199,6 +199,53 @@ function assetHash(name) {
 }
 
 
+function goatcounterEndpoint() {
+  const code = ((config.analytics && config.analytics.goatcounter) || "").trim();
+  if (!code) return "";
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(code)) {
+    throw new Error(
+      `blog.config.js: analytics.goatcounter is "${code}". It wants the site code on ` +
+        `its own — the CODE in https://CODE.goatcounter.com — not the whole URL.`,
+    );
+  }
+  return `https://${code}.goatcounter.com/count`;
+}
+
+// `hashRoutes` is for the single-page app: GoatCounter's default path is
+// pathname + search, which drops the fragment the app routes on, so every
+// route would be recorded as "/".
+function analyticsSnippet({ hashRoutes = false } = {}) {
+  const endpoint = goatcounterEndpoint();
+  if (!endpoint) return "";
+
+  const tag = `<script data-goatcounter="${endpoint}" async src="https://gc.zgo.at/count.js"></script>`;
+  if (!hashRoutes) return tag;
+
+  return `<script>
+    // A post's fragment route is folded onto the path of its static page, so
+    // one post reads as one row however it was reached.
+    function goatcounterPath() {
+        var hash = window.location.hash.slice(1);
+        try { hash = decodeURIComponent(hash); } catch (e) {}
+        if (!hash || hash === "/") return "/";
+        if (hash === "/about") return "/about";
+        if (hash.startsWith("/tag/")) return "/tag/" + hash.slice(5);
+        return "/posts/" + hash.slice(1) + "/";
+    }
+
+    window.goatcounter = { path: goatcounterPath };
+
+    // A hash change is no new document, so count it by hand. count.js is async
+    // and may not have arrived yet.
+    window.addEventListener("hashchange", function () {
+        if (window.goatcounter && window.goatcounter.count) {
+            window.goatcounter.count({ path: goatcounterPath() });
+        }
+    });
+</script>
+${tag}`;
+}
+
 function renderSinglePage(posts) {
   const template = loadTemplate("app.html");
 
@@ -224,7 +271,7 @@ function renderSinglePage(posts) {
     .replace(/\{\{cssVersion\}\}/g, assetHash("style.css"))
     .replace(/\{\{ogVersion\}\}/g, assetHash("og-image.png"))
     .replace("{{projects}}", renderProjectsHtml())
-    
+    .replace("{{analytics}}", analyticsSnippet({ hashRoutes: true }))
 }
 
 function escapeXml(str) {
@@ -330,12 +377,24 @@ Sitemap: ${siteUrl}/sitemap.xml
 function renderProjectsHtml() {
   const projects = config.projects || [];
   if (!projects.length) return "";
+
+  // Nothing else records these: an on-origin project is a separate repo with
+  // no counting script, and the rest link off the site.
+  const countClicks = Boolean(goatcounterEndpoint());
+  const clickEvent = (p) =>
+    "project-" +
+    String(p.path || p.name)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
   const items = projects
     .map((p) => {
       // `path` is a project site on this origin; `url` is anything else, for a
       // project that has no page here to link to.
       const href = p.url || "/" + String(p.path).replace(/^\/+|\/+$/g, "") + "/";
-      return `<li><a href="${escapeXml(href)}">${escapeXml(p.name)}</a>` +
+      const click = countClicks ? ` data-goatcounter-click="${escapeXml(clickEvent(p))}"` : "";
+      return `<li><a href="${escapeXml(href)}"${click}>${escapeXml(p.name)}</a>` +
         (p.description ? `<span>${escapeXml(p.description)}</span>` : "") + `</li>`;
     })
     .join("\n                        ");
@@ -612,6 +671,7 @@ hr{border:0;border-top:1px solid rgba(128,128,128,.25);margin:2.5rem 0}
 <div class="cover">${coverSvg}</div>
 <article>${p.content}</article>
 <p class="back"><a href="${siteUrl}/">← ${escapeXml(title)}</a></p>
+${analyticsSnippet()}
 </body>
 </html>`;
 
