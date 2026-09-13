@@ -63,6 +63,38 @@ function slugify(filename) {
     .replace(/^-|-$/g, "");
 }
 
+// The key is what `lang:` takes in frontmatter and the tag that goes on the
+// element wrapping the text; `label` is the badge the post list shows.
+const LANGUAGES = {
+  en: { label: "EN" },
+  th: { label: "TH" },
+};
+
+const KNOWN_LANGS = Object.keys(LANGUAGES).join(", ");
+
+// The language of the shell, and of a post that declares none.
+function siteLang() {
+  const lang = String(config.site.lang || "en").trim();
+  if (!LANGUAGES[lang]) {
+    throw new Error(
+      `blog.config.js: site.lang is "${lang}". Known languages are ${KNOWN_LANGS}.`,
+    );
+  }
+  return lang;
+}
+
+// Thrown, not skipped like a bad parse above: a typo here would otherwise
+// deploy a site quietly missing the post.
+function postLang(file, value) {
+  const lang = String(value || "").trim() || siteLang();
+  if (!LANGUAGES[lang]) {
+    throw new Error(
+      `content/${file}: lang is "${lang}". Known languages are ${KNOWN_LANGS}.`,
+    );
+  }
+  return lang;
+}
+
 function scanContent() {
   // Check if content directory exists
   if (!fs.existsSync(CONTENT_DIR)) {
@@ -89,6 +121,7 @@ function scanContent() {
         slug: slugify(file),
         filename: file,
         ...parsed,
+        lang: postLang(file, parsed.lang),
       };
     })
     .filter((post) => post !== null);
@@ -161,12 +194,16 @@ function reportMissingDiagrams() {
 
 function renderPost(post) {
   const content = marked(post.content);
+  const lang = post.lang || siteLang();
   return {
     slug: post.slug,
     title: post.title,
     date: post.date,
     description: post.description,
     tags: post.tags || [],
+    lang,
+    // Only a post out of step with the shell is worth marking.
+    langBadge: lang === siteLang() ? "" : LANGUAGES[lang].label,
     content,
     feedContent: forFeed(content),
   };
@@ -267,6 +304,7 @@ function renderSinglePage(posts) {
     .replace("{{posts}}", postsJson)
     .replace("{{about}}", aboutJson)
     .replace("{{config}}", configJson)
+    .replace(/\{\{lang\}\}/g, siteLang())
     .replace(/\{\{description\}\}/g, config.site.description)
     .replace(/\{\{cssVersion\}\}/g, assetHash("style.css"))
     .replace(/\{\{ogVersion\}\}/g, assetHash("og-image.png"))
@@ -295,11 +333,12 @@ function generateFeeds(posts) {
     title,
     home_page_url: siteUrl + "/",
     feed_url: siteUrl + "/feed.json",
-    language: "en",
+    language: siteLang(),
     items: rendered.map((p) => ({
       id: siteUrl + "/posts/" + p.slug + "/",
       url: siteUrl + "/posts/" + p.slug + "/",
       title: p.title,
+      language: p.lang,
       date_published: p.date,
       summary: p.description,
       content_html: p.feedContent,
@@ -310,7 +349,7 @@ function generateFeeds(posts) {
   // Atom 1.0
   const updated = rendered.length ? rendered[0].date : new Date().toISOString();
   const atom = `<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="${siteLang()}">
   <title>${escapeXml(title)}</title>
   <link href="${siteUrl}/"/>
   <link rel="self" href="${siteUrl}/atom.xml"/>
@@ -318,7 +357,7 @@ function generateFeeds(posts) {
   <updated>${updated}</updated>
 ${rendered
       .map(
-        (p) => `  <entry>
+        (p) => `  <entry xml:lang="${escapeXml(p.lang)}">
     <title>${escapeXml(p.title)}</title>
     <id>${siteUrl}/posts/${p.slug}/</id>
     <link href="${siteUrl}/posts/${p.slug}/"/>
@@ -619,7 +658,7 @@ function generatePostPages(posts) {
     // here to be indexed at all. Social crawlers, which do not run JS, read the
     // OG tags above and stop.
     const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeXml(p.lang)}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

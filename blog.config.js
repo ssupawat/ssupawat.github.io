@@ -1,6 +1,8 @@
 export default {
   site: {
     name: "art.",
+    // The shell's language, and the default for a post that sets no `lang`.
+    lang: "en",
     // Shown above the post list. Leave empty to render no tagline at all.
     tagline: "projects and notes",
     // Used for the home page meta description and og:description.
