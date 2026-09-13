@@ -17,6 +17,7 @@ Pushing to `main` builds and deploys to GitHub Pages.
 | To | Edit |
 | --- | --- |
 | Write a post | add `content/<slug>.md` |
+| Write a post in Thai | `lang: "th"` in its frontmatter |
 | Edit the About page | `about.md` |
 | Change the tagline or the home page meta description | `site.tagline` / `site.description` in `blog.config.js` |
 | List another project | add to `projects` in `blog.config.js` |
@@ -32,12 +33,13 @@ Pushing to `main` builds and deploys to GitHub Pages.
 title: "Title"
 description: "One line, used as the post's meta description"
 date: "2026-01-31"
+lang: "th"
 tags:
   - notes
 ---
 ```
 
-`tags` must be a block list. `tags: [notes]` on one line is read as a string, not an array — the parser in `build.js` only walks indented `- ` lines.
+`lang` is optional — without it a post is in `site.lang`, and an unknown value fails the build. It sets the `lang` attribute on the post's pages, the language of its feed entry, and the badge the post list shows. `tags` must be a block list. `tags: [notes]` on one line is read as a string, not an array — the parser in `build.js` only walks indented `- ` lines.
 
 ### Projects
 
@@ -65,6 +67,7 @@ under the dashboard's Events tab rather than in the page list. `count.js` skips
 - **A `#/…` fragment is not a separate URL to an analytics script either.** GoatCounter's default path drops it, so `analyticsSnippet()` in `build.js` spells the path out and folds `#/<slug>` onto `/posts/<slug>/`. A new route shape in the router needs a matching case there.
 - **A `#/…` fragment is not a separate URL to a crawler.** That is why `/posts/<slug>/` carries the whole article rather than a stub — the SPA is the browse surface, those pages are the addresses.
 - **Theme colours live only in `assets/style.css`.** The toggle sets `data-theme` on `<html>`; it must not write colours inline, or the stylesheet loses. `style.css` is served with a content hash in its URL, so a change always reaches the browser.
+- **A new language needs a font, not just an entry in `LANGUAGES`.** Inter carries no Thai, which is why `Noto Sans Thai` is requested in `app.html` and named after Inter in every stack in `style.css`. Each family is served behind its own `unicode-range`, so a page with no Thai on it downloads none of it.
 - **`build.js` never cleans `dist/`.** A local build can leave pages behind from content you deleted. CI is unaffected; it builds from a fresh checkout.
 - **The OG image only regenerates where Chrome is at the macOS path** hard-coded in `generateOgImage()`. Everywhere else the committed `assets/og-image.png` is reused, which is why it is in git.
 
