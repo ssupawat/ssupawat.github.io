@@ -120,14 +120,16 @@ export default defineConfig({
             };
 
             res.setHeader("Content-Type", mimeTypes[ext] || "text/plain");
-            let content = fs.readFileSync(distPath, "utf-8");
+            let content = fs.readFileSync(distPath);
 
             // Inject Vite's client script for HMR if it's an HTML file
             if (ext === ".html") {
               const viteScript = `<script type="module">
                 import "/@vite/client";
               </script>`;
-              content = content.replace("</body>", `${viteScript}</body>`);
+              content = content
+                .toString("utf-8")
+                .replace("</body>", `${viteScript}</body>`);
             }
 
             res.end(content);
