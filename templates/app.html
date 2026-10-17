@@ -257,6 +257,9 @@
                             </div>
                             <span class="post-tags">${post.tags && post.tags.length ? post.tags.map(t => `<a href="#/tag/${t}" class="tag">${t}</a>`).join("") : ""}</span>
                         </header>
+                        <div class="cover">${post.hero
+                            ? `<img src="${post.hero}" alt="" loading="lazy">`
+                            : `<img src="/posts/${post.slug}/cover.svg" alt="">`}</div>
                         <button class="share-post" id="share-btn" title="Copy share link"><span class="material-symbols-outlined">link</span></button>
                         <div class="content">${post.content}</div>
                         ${navHtml}

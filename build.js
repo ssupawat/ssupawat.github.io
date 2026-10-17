@@ -230,6 +230,7 @@ function renderPost(post) {
     title: post.title,
     date: post.date,
     description: post.description,
+    hero: post.hero || "",
     tags: post.tags || [],
     lang,
     // Only a post out of step with the shell is worth marking.
@@ -677,6 +678,17 @@ function generatePostPages(posts) {
     const coverSvg = generateCover(seed);
     fs.writeFileSync(path.join(slugDir, "cover.svg"), coverSvg);
 
+    let coverHtml = `<div class="cover">${coverSvg}</div>`;
+    if (p.hero) {
+      const heroPath = path.join(__dirname, p.hero);
+      if (!fs.existsSync(heroPath)) {
+        if (DEV) console.error(`  hero missing for ${p.slug}: ${p.hero}`);
+        else throw new Error(`hero image not found for ${p.slug}: ${p.hero}`);
+      } else {
+        coverHtml = `<div class="cover"><img src="${escapeXml(p.hero)}" alt="" loading="lazy"></div>`;
+      }
+    }
+
     const description = p.description || "";
     const tagsHtml = (p.tags || [])
       .map((t) => `<a href="${siteUrl}/#/tag/${encodeURIComponent(t)}">#${escapeXml(t)}</a>`)
@@ -699,7 +711,7 @@ function generatePostPages(posts) {
 <meta property="og:type" content="article">
 <meta property="og:title" content="${escapeXml(p.title)}">
 <meta property="og:description" content="${escapeXml(description)}">
-<meta property="og:image" content="${siteUrl}/assets/og-image.png?v=${assetHash("og-image.png")}">
+<meta property="og:image" content="${p.hero ? siteUrl + p.hero : siteUrl + "/assets/og-image.png?v=" + assetHash("og-image.png")}">
 <meta property="og:url" content="${siteUrl}/posts/${p.slug}/">
 <meta property="article:published_time" content="${escapeXml(p.date || "")}">
 <meta name="twitter:card" content="summary_large_image">
@@ -717,7 +729,7 @@ h3{font-size:1.05rem;font-weight:600;margin:2rem 0 .5rem}
 .meta a{color:#6B7280;text-decoration:none;margin-right:.4rem}
 a{color:#2F6F6A}
 .cover{margin-bottom:2.5rem}
-.cover svg{max-width:100%;height:auto;display:block}
+.cover svg,.cover img{max-width:100%;height:auto;display:block}
 article img{max-width:100%;height:auto}
 .wide-figure{margin:2.25rem 0;overflow-x:auto}
 .wide-figure svg{max-width:100%;min-width:560px;height:auto;display:block}
@@ -742,7 +754,7 @@ hr{border:0;border-top:1px solid rgba(128,128,128,.25);margin:2.5rem 0}
 <p class="site"><a href="/">${escapeXml(title)}</a></p>
 <h1>${escapeXml(p.title)}</h1>
 <p class="meta">${escapeXml(p.date || "")}${tagsHtml ? " · " + tagsHtml : ""}</p>
-<div class="cover">${coverSvg}</div>
+${coverHtml}
 <article>${p.content}</article>
 <p class="back"><a href="/">← ${escapeXml(title)}</a></p>
 ${analyticsSnippet()}
