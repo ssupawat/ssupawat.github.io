@@ -2,6 +2,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { marked } from "marked";
+import { createHighlighter } from "shiki";
 import { splitCaption, hashSource, diagramPath } from "./lib/diagrams.mjs";
 import config from "./blog.config.js";
 import { fileURLToPath } from "url";
@@ -157,7 +158,17 @@ const DEV = process.env.BLOG_DEV === "1";
 marked.use({
   renderer: {
     code(code, infostring) {
-      if (infostring !== "mermaid") return false; // default renderer handles it
+      if (infostring !== "mermaid") {
+        const lang = (infostring || "").split(/\s+/)[0];
+        if (highlighter && lang && highlighter.getLoadedLanguages().includes(lang)) {
+          return highlighter.codeToHtml(code, {
+            lang,
+            themes: { light: "github-light", dark: "github-dark" },
+            defaultColor: false,
+          });
+        }
+        return false; // default renderer handles it
+      }
       const { caption, source } = splitCaption(code);
       const svgFile = diagramPath(__dirname, hashSource(source));
       if (!fs.existsSync(svgFile)) {
@@ -180,6 +191,25 @@ marked.use({
 // Posts are rendered at three call sites, so say this once per run. In dev
 // each rebuild is a fresh process, so the next save reports again.
 let reportedMissing = false;
+
+let highlighter = null;
+
+async function initHighlighter() {
+  const langs = new Set();
+  if (fs.existsSync(CONTENT_DIR)) {
+    for (const file of fs.readdirSync(CONTENT_DIR).filter((f) => f.endsWith(".md"))) {
+      const md = fs.readFileSync(path.join(CONTENT_DIR, file), "utf-8");
+      for (const match of md.matchAll(/^```(\S+)/gm)) {
+        if (match[1] !== "mermaid") langs.add(match[1]);
+      }
+    }
+  }
+  if (!langs.size) return null;
+  return createHighlighter({
+    themes: ["github-light", "github-dark"],
+    langs: [...langs],
+  });
+}
 
 function reportMissingDiagrams() {
   if (!missingDiagrams.length || reportedMissing) return;
@@ -700,7 +730,8 @@ table{border-collapse:collapse;width:100%;overflow-x:auto;display:block}
 th,td{border:1px solid rgba(128,128,128,.3);padding:.4rem .6rem;text-align:left}
 hr{border:0;border-top:1px solid rgba(128,128,128,.25);margin:2.5rem 0}
 .back{margin-top:3rem;padding-top:1.5rem;border-top:1px solid rgba(128,128,128,.2);font-family:"JetBrains Mono","SF Mono",Monaco,monospace;font-size:.85rem}
-@media(prefers-color-scheme:dark){body{background:#151A21;color:#F4F5F3}}
+.shiki{background-color:var(--shiki-light-bg);color:var(--shiki-light)}.shiki span{color:var(--shiki-light)}
+@media(prefers-color-scheme:dark){body{background:#151A21;color:#F4F5F3}.shiki{background-color:var(--shiki-dark-bg);color:var(--shiki-dark)}.shiki span{color:var(--shiki-dark)}}
 </style>
 </head>
 <body>
@@ -757,8 +788,15 @@ function copyDirSync(src, dest) {
   }
 }
 
-function build() {
+async function build() {
   console.log("Building blog...");
+
+  try {
+    highlighter = await initHighlighter();
+  } catch (e) {
+    if (DEV) console.error("  shiki init failed, code stays plain:", e.message);
+    else throw e;
+  }
 
   if (!fs.existsSync(DIST_DIR)) {
     fs.mkdirSync(DIST_DIR, { recursive: true });
@@ -786,4 +824,7 @@ function build() {
   console.log("Build complete!");
 }
 
-build();
+build().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

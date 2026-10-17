@@ -17,6 +17,24 @@
            to the body copy beside it. */
         --muted: #9BA3AF;
     }
+
+    :root:not([data-theme="light"]) .content pre.shiki {
+        background-color: var(--shiki-dark-bg);
+        color: var(--shiki-dark);
+    }
+
+    :root:not([data-theme="light"]) .content pre.shiki span {
+        color: var(--shiki-dark);
+    }
+}
+
+:root[data-theme="dark"] .content pre.shiki {
+    background-color: var(--shiki-dark-bg);
+    color: var(--shiki-dark);
+}
+
+:root[data-theme="dark"] .content pre.shiki span {
+    color: var(--shiki-dark);
 }
 
 /* An explicit choice from the toggle wins either way. */
@@ -278,6 +296,15 @@ a:hover {
 .content pre code {
     background: none;
     padding: 0;
+}
+
+.content pre.shiki {
+    background-color: var(--shiki-light-bg);
+    color: var(--shiki-light);
+}
+
+.content pre.shiki span {
+    color: var(--shiki-light);
 }
 
 .content blockquote {
