@@ -98,11 +98,15 @@
 
             // Only the choice lives here; the colours belong to the
             // stylesheet, which keys off this attribute.
-            function setTheme(theme) {
+            function applyTheme(theme) {
                 html.setAttribute("data-theme", theme);
-                localStorage.setItem("theme", theme);
                 const ti = document.getElementById("theme-icon");
                 if (ti) ti.textContent = theme === "dark" ? "dark_mode" : "light_mode";
+            }
+
+            function setTheme(theme) {
+                applyTheme(theme);
+                localStorage.setItem("theme", theme);
             }
 
             const savedTheme = localStorage.getItem("theme");
@@ -111,14 +115,14 @@
             ).matches;
 
             if (savedTheme) {
-                setTheme(savedTheme);
+                applyTheme(savedTheme);
             } else if (systemPrefersDark) {
-                setTheme("dark");
+                applyTheme("dark");
             }
 
             themeToggle.addEventListener("click", () => {
                 const currentTheme =
-                    localStorage.getItem("theme") ||
+                    html.getAttribute("data-theme") ||
                     (systemPrefersDark ? "dark" : "light");
                 setTheme(currentTheme === "dark" ? "light" : "dark");
             });
@@ -262,7 +266,7 @@
                 const shareBtn = document.getElementById("share-btn");
                 if (shareBtn) {
                     shareBtn.addEventListener("click", () => {
-                        const url = config.site.url + "/posts/" + post.slug + "/";
+                        const url = location.origin + "/posts/" + post.slug + "/";
                         if (navigator.share) {
                             navigator.share({ title: post.title, url });
                         } else {

@@ -705,6 +705,7 @@ function generatePostPages(posts) {
 <meta name="twitter:card" content="summary_large_image">
 <link rel="alternate" type="application/atom+xml" href="${siteUrl}/atom.xml">
 <link rel="alternate" type="application/feed+json" href="${siteUrl}/feed.json">
+<script>try{const t=localStorage.getItem("theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <style>
 body{font-family:"Inter","Noto Sans Thai",system-ui,-apple-system,sans-serif;max-width:700px;margin:0 auto;padding:3rem 1.5rem;background:#F4F5F3;color:#151A21;line-height:1.7}
 .site{font-family:"JetBrains Mono","SF Mono",Monaco,monospace;font-size:.9rem;margin:0 0 2rem}
@@ -731,16 +732,19 @@ th,td{border:1px solid rgba(128,128,128,.3);padding:.4rem .6rem;text-align:left}
 hr{border:0;border-top:1px solid rgba(128,128,128,.25);margin:2.5rem 0}
 .back{margin-top:3rem;padding-top:1.5rem;border-top:1px solid rgba(128,128,128,.2);font-family:"JetBrains Mono","SF Mono",Monaco,monospace;font-size:.85rem}
 .shiki{background-color:var(--shiki-light-bg);color:var(--shiki-light)}.shiki span{color:var(--shiki-light)}
-@media(prefers-color-scheme:dark){body{background:#151A21;color:#F4F5F3}.shiki{background-color:var(--shiki-dark-bg);color:var(--shiki-dark)}.shiki span{color:var(--shiki-dark)}}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) body{background:#151A21;color:#F4F5F3}:root:not([data-theme=light]) .shiki{background-color:var(--shiki-dark-bg);color:var(--shiki-dark)}:root:not([data-theme=light]) .shiki span{color:var(--shiki-dark)}}
+:root[data-theme=dark] body{background:#151A21;color:#F4F5F3}
+:root[data-theme=dark] .shiki{background-color:var(--shiki-dark-bg);color:var(--shiki-dark)}
+:root[data-theme=dark] .shiki span{color:var(--shiki-dark)}
 </style>
 </head>
 <body>
-<p class="site"><a href="${siteUrl}/">${escapeXml(title)}</a></p>
+<p class="site"><a href="/">${escapeXml(title)}</a></p>
 <h1>${escapeXml(p.title)}</h1>
 <p class="meta">${escapeXml(p.date || "")}${tagsHtml ? " · " + tagsHtml : ""}</p>
 <div class="cover">${coverSvg}</div>
 <article>${p.content}</article>
-<p class="back"><a href="${siteUrl}/">← ${escapeXml(title)}</a></p>
+<p class="back"><a href="/">← ${escapeXml(title)}</a></p>
 ${analyticsSnippet()}
 </body>
 </html>`;
